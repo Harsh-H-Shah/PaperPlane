@@ -281,6 +281,88 @@ def version():
     console.print(f"\n🚀 AutoApplier v{__version__}\n")
 
 
+@app.command(name="llm-usage")
+def llm_usage():
+    """Show LLM API usage statistics (to stay within free tier)."""
+    console.print("\n📊 [bold blue]LLM Usage Statistics[/bold blue]\n")
+    
+    settings = get_settings()
+    
+    if not settings.gemini_api_key:
+        console.print("[red]❌ Gemini API key not configured[/red]")
+        console.print("Add GEMINI_API_KEY to .env file")
+        return
+    
+    try:
+        from src.llm.gemini import GeminiClient
+        client = GeminiClient()
+        stats = client.get_usage_stats()
+        
+        table = Table(title="Gemini Free Tier Usage")
+        table.add_column("Metric", style="cyan")
+        table.add_column("Used", style="yellow")
+        table.add_column("Limit", style="green")
+        table.add_column("Remaining", style="magenta")
+        
+        table.add_row(
+            "Daily Requests",
+            str(stats["daily_requests"]),
+            str(stats["daily_limit"]),
+            str(stats["daily_remaining"])
+        )
+        table.add_row(
+            "Monthly Tokens",
+            f"{stats['monthly_tokens']:,}",
+            f"{stats['monthly_limit']:,}",
+            f"{stats['monthly_remaining']:,}"
+        )
+        
+        console.print(table)
+        
+        # Warning if approaching limits
+        daily_pct = stats["daily_requests"] / stats["daily_limit"] * 100
+        monthly_pct = stats["monthly_tokens"] / stats["monthly_limit"] * 100
+        
+        if daily_pct > 80 or monthly_pct > 80:
+            console.print("\n[yellow]⚠️ Approaching usage limits! Consider waiting before more requests.[/yellow]")
+        else:
+            console.print(f"\n[green]✅ Usage OK ({daily_pct:.1f}% daily, {monthly_pct:.1f}% monthly)[/green]")
+            
+    except Exception as e:
+        console.print(f"[red]Error checking usage: {e}[/red]")
+
+
+@app.command(name="test-llm")
+def test_llm():
+    """Test LLM connection with a simple query (uses 1 API call)."""
+    console.print("\n🧪 [bold blue]Testing LLM Connection...[/bold blue]\n")
+    
+    settings = get_settings()
+    
+    if not settings.gemini_api_key:
+        console.print("[red]❌ Gemini API key not configured[/red]")
+        return
+    
+    try:
+        from src.llm.gemini import GeminiClient
+        client = GeminiClient()
+        
+        console.print("Sending test query...")
+        response = client.generate(
+            "Reply with exactly: 'AutoApplier LLM connection successful!'",
+            max_tokens=50,
+            temperature=0.0
+        )
+        
+        if response:
+            console.print(f"[green]✅ Response: {response}[/green]")
+        else:
+            console.print("[yellow]⚠️ No response received (might be rate limited)[/yellow]")
+            
+    except Exception as e:
+        console.print(f"[red]❌ Error: {e}[/red]")
+
+
 def main():
     """Main entry point"""
     app()
