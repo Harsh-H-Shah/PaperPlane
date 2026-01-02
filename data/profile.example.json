@@ -1,0 +1,168 @@
+{
+  "personal": {
+    "first_name": "Your",
+    "last_name": "Name",
+    "full_name": "Your Full Name",
+    "email": "your.email@example.com",
+    "phone": "+1-555-123-4567",
+    "address": {
+      "street": "123 Main Street",
+      "city": "San Francisco",
+      "state": "CA",
+      "zip": "94102",
+      "country": "United States"
+    },
+    "linkedin": "https://linkedin.com/in/yourprofile",
+    "github": "https://github.com/yourusername",
+    "portfolio": "https://yourportfolio.com",
+    "website": ""
+  },
+  
+  "work_authorization": {
+    "authorized_us": true,
+    "requires_sponsorship": false,
+    "visa_status": "US Citizen",
+    "clearance": "None"
+  },
+  
+  "demographics": {
+    "gender": "Prefer not to say",
+    "ethnicity": "Prefer not to say",
+    "veteran_status": "I am not a protected veteran",
+    "disability_status": "I do not have a disability"
+  },
+  
+  "preferences": {
+    "desired_salary": {
+      "min": 100000,
+      "max": 150000,
+      "currency": "USD"
+    },
+    "work_type": ["Remote", "Hybrid"],
+    "willing_to_relocate": false,
+    "available_start_date": "2 weeks notice",
+    "open_to_contract": false
+  },
+  
+  "experience": [
+    {
+      "company": "Example Corp",
+      "title": "Software Engineer",
+      "location": "San Francisco, CA",
+      "start_date": "2022-01",
+      "end_date": "Present",
+      "current": true,
+      "description": "Developed and maintained full-stack web applications using Python and React. Led migration of legacy systems to microservices architecture. Improved API response times by 40% through optimization.",
+      "highlights": [
+        "Built REST APIs serving 1M+ requests/day",
+        "Led team of 3 engineers on key project",
+        "Reduced deployment time by 60% with CI/CD improvements"
+      ],
+      "technologies": ["Python", "React", "PostgreSQL", "AWS", "Docker"]
+    },
+    {
+      "company": "Startup Inc",
+      "title": "Junior Developer",
+      "location": "Remote",
+      "start_date": "2020-06",
+      "end_date": "2021-12",
+      "current": false,
+      "description": "Full-stack development for SaaS platform. Implemented new features and fixed bugs across the stack.",
+      "highlights": [
+        "Developed customer-facing dashboard",
+        "Integrated third-party payment APIs",
+        "Wrote comprehensive test suites"
+      ],
+      "technologies": ["JavaScript", "Node.js", "MongoDB", "React"]
+    }
+  ],
+  
+  "education": [
+    {
+      "institution": "University of California",
+      "degree": "Bachelor of Science",
+      "field": "Computer Science",
+      "location": "Berkeley, CA",
+      "start_date": "2016-08",
+      "end_date": "2020-05",
+      "gpa": "3.7",
+      "honors": ["Dean's List", "Magna Cum Laude"],
+      "relevant_coursework": [
+        "Data Structures",
+        "Algorithms",
+        "Database Systems",
+        "Operating Systems",
+        "Machine Learning"
+      ]
+    }
+  ],
+  
+  "skills": {
+    "programming_languages": [
+      {"name": "Python", "level": "Expert", "years": 5},
+      {"name": "JavaScript", "level": "Advanced", "years": 4},
+      {"name": "TypeScript", "level": "Advanced", "years": 3},
+      {"name": "Java", "level": "Intermediate", "years": 2},
+      {"name": "SQL", "level": "Advanced", "years": 4}
+    ],
+    "frameworks": [
+      "React", "Node.js", "Django", "Flask", "FastAPI", "Next.js"
+    ],
+    "databases": [
+      "PostgreSQL", "MongoDB", "Redis", "MySQL"
+    ],
+    "cloud_devops": [
+      "AWS", "GCP", "Docker", "Kubernetes", "CI/CD", "Terraform"
+    ],
+    "tools": [
+      "Git", "Linux", "VS Code", "Jira", "Figma"
+    ],
+    "soft_skills": [
+      "Problem Solving",
+      "Team Collaboration",
+      "Communication",
+      "Agile/Scrum"
+    ]
+  },
+  
+  "projects": [
+    {
+      "name": "Open Source Contribution",
+      "description": "Contributed to popular open-source project with 10K+ stars",
+      "url": "https://github.com/example/project",
+      "technologies": ["Python", "Docker"],
+      "highlights": ["Fixed critical bug", "Added new feature"]
+    }
+  ],
+  
+  "certifications": [
+    {
+      "name": "AWS Certified Developer - Associate",
+      "issuer": "Amazon Web Services",
+      "date": "2023-06",
+      "expiry": "2026-06",
+      "url": ""
+    }
+  ],
+  
+  "languages": [
+    {"language": "English", "proficiency": "Native"},
+    {"language": "Spanish", "proficiency": "Conversational"}
+  ],
+  
+  "resume": {
+    "file_path": "data/resume.pdf",
+    "last_updated": "2024-01-01"
+  },
+  
+  "cover_letter_template": "Dear Hiring Manager,\n\nI am excited to apply for the {position} role at {company}. With {years} years of experience in software development and a strong background in {skills}, I am confident I would be a valuable addition to your team.\n\n{custom_paragraph}\n\nThank you for considering my application. I look forward to discussing how I can contribute to {company}'s success.\n\nBest regards,\n{name}",
+  
+  "common_answers": {
+    "why_leaving": "I'm looking for new challenges and opportunities to grow in a dynamic environment.",
+    "greatest_strength": "My ability to quickly learn new technologies and apply them to solve complex problems.",
+    "greatest_weakness": "I sometimes spend too much time perfecting code, but I've learned to balance quality with delivery timelines.",
+    "where_see_yourself_5_years": "I see myself as a senior engineer leading technical initiatives and mentoring junior developers.",
+    "why_this_company": "I'm impressed by {company}'s innovative approach to {industry} and would love to contribute to impactful projects.",
+    "salary_expectations": "Based on my experience and the role requirements, I'm looking for a salary in the range of $100,000-$150,000, but I'm open to discussing compensation that reflects the full value of the opportunity."
+  }
+}

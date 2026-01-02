@@ -1,0 +1,161 @@
+# AutoApplier Configuration
+# =============================================================================
+
+# Application settings
+application:
+  # Review mode: if true, pauses before submitting each application
+  review_mode: true
+  # Maximum applications to process per run
+  max_per_run: 10
+  # Delay between applications (seconds)
+  delay:
+    min: 30
+    max: 120
+  # Save screenshots of completed applications
+  save_screenshots: true
+  screenshots_dir: "data/screenshots"
+
+# Browser configuration
+browser:
+  # Browser type: chromium, firefox, webkit
+  type: chromium
+  # Run in headless mode
+  headless: true
+  # Slow down actions for debugging (ms)
+  slow_mo: 0
+  # Viewport size
+  viewport:
+    width: 1920
+    height: 1080
+  # User agent (leave empty for default stealth)
+  user_agent: ""
+
+# Job search preferences
+search:
+  # Job titles to search for
+  titles:
+    - "Software Engineer"
+    - "Software Developer"
+    - "Backend Engineer"
+    - "Full Stack Developer"
+    - "Frontend Engineer"
+  
+  # Locations (leave empty for remote)
+  locations:
+    - "Remote"
+    - "United States"
+  
+  # Experience levels
+  experience_levels:
+    - "Entry Level"
+    - "Mid Level"
+    - "Associate"
+  
+  # Job types
+  job_types:
+    - "Full-time"
+  
+  # Keywords to include
+  include_keywords:
+    - "Python"
+    - "JavaScript"
+    - "React"
+  
+  # Keywords to exclude
+  exclude_keywords:
+    - "Senior"
+    - "Staff"
+    - "Principal"
+    - "Manager"
+    - "Lead"
+    - "Director"
+  
+  # Companies to exclude
+  exclude_companies: []
+  
+  # Only apply to jobs posted within X days
+  max_days_old: 7
+
+# Scraper sources configuration
+scrapers:
+  linkedin:
+    enabled: true
+    easy_apply_only: true
+  jobright:
+    enabled: true
+  simplify:
+    enabled: true
+  cvrve:
+    enabled: true
+  career_sites:
+    enabled: true
+    companies:
+      - name: "Google"
+        url: "https://careers.google.com"
+      - name: "Microsoft"
+        url: "https://careers.microsoft.com"
+      - name: "Amazon"
+        url: "https://www.amazon.jobs"
+      - name: "Meta"
+        url: "https://www.metacareers.com"
+      - name: "Apple"
+        url: "https://jobs.apple.com"
+
+# LLM configuration
+llm:
+  # Provider: gemini, openai, ollama
+  provider: gemini
+  # Model name
+  model: "gemini-pro"
+  # Temperature for generation (0.0 - 1.0)
+  temperature: 0.7
+  # Maximum tokens for responses
+  max_tokens: 500
+  # Retry attempts for failed requests
+  max_retries: 3
+  # Questions that always require human review
+  always_review_questions:
+    - "salary"
+    - "compensation"
+    - "visa"
+    - "sponsorship"
+    - "clearance"
+    - "criminal"
+    - "background check"
+
+# Notification settings
+notifications:
+  # Primary notification method: discord, telegram, ntfy, email
+  primary: ntfy
+  # Notify on these events
+  events:
+    # When a question needs human review
+    needs_review: true
+    # When an application is completed
+    completed: true
+    # When an application fails
+    failed: true
+    # Daily summary
+    daily_summary: true
+  # Quiet hours (no notifications)
+  quiet_hours:
+    enabled: false
+    start: "22:00"
+    end: "08:00"
+
+# Database settings
+database:
+  # Path to SQLite database
+  path: "data/applications.db"
+  # Enable query logging
+  echo: false
+
+# Logging
+logging:
+  level: INFO
+  # Log file path
+  file: "logs/autoapplier.log"
+  # Maximum log file size (MB)
+  max_size: 10
+  # Number of backup files
+  backup_count: 5
