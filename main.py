@@ -138,19 +138,55 @@ def status():
 def scrape(
     source: Optional[str] = typer.Option(
         None, "--source", "-s",
-        help="Specific source to scrape (linkedin, jobright, simplify, cvrve, all)"
+        help="Specific source to scrape (linkedin, simplify, cvrve, all)"
     ),
     limit: int = typer.Option(
         50, "--limit", "-l",
-        help="Maximum number of jobs to scrape"
+        help="Maximum number of jobs to scrape per source"
     ),
 ):
     """Scrape jobs from configured sources."""
+    import asyncio
+    
     console.print("\n🔍 [bold blue]Scraping Jobs...[/bold blue]\n")
     
-    # TODO: Implement scrapers in Phase 2
-    console.print("[yellow]⚠️ Scrapers not implemented yet (Phase 2)[/yellow]")
-    console.print("For now, use [cyan]autoapplier add-job[/cyan] to add jobs manually")
+    async def run_scrape():
+        from src.scrapers.aggregator import JobAggregator
+        
+        aggregator = JobAggregator()
+        
+        if source and source.lower() != "all":
+            console.print(f"Scraping from [cyan]{source}[/cyan]...")
+            try:
+                jobs = await aggregator.scrape_source(source, limit=limit)
+                console.print(f"[green]✅ Found {len(jobs)} jobs from {source}[/green]")
+                return {"jobs": jobs}
+            except ValueError as e:
+                console.print(f"[red]Error: {e}[/red]")
+                return None
+        else:
+            console.print("Scraping from all sources...")
+            result = await aggregator.scrape_all(limit_per_source=limit)
+            
+            # Display results
+            stats = result["stats"]
+            console.print(f"\n[bold]Results:[/bold]")
+            for src in stats["sources"]:
+                if src.get("error"):
+                    console.print(f"  ❌ {src['name']}: Error - {src['error']}")
+                else:
+                    console.print(f"  ✅ {src['name']}: {src['found']} jobs found")
+            
+            console.print(f"\n[green]Total: {stats['total_found']} found, {stats['total_new']} new[/green]")
+            if stats["duplicates_removed"] > 0:
+                console.print(f"[dim]Removed {stats['duplicates_removed']} duplicates[/dim]")
+            
+            return result
+    
+    try:
+        asyncio.run(run_scrape())
+    except Exception as e:
+        console.print(f"[red]Scraping error: {e}[/red]")
 
 
 @app.command()
