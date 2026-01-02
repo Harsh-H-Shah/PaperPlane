@@ -362,6 +362,24 @@ def test_llm():
     except Exception as e:
         console.print(f"[red]❌ Error: {e}[/red]")
 
+@app.command()
+def dashboard(
+    port: int = typer.Option(8080, "--port", "-p", help="Port to run dashboard on"),
+    host: str = typer.Option("127.0.0.1", "--host", help="Host to bind to"),
+):
+    """Launch the web dashboard to view and manage applications."""
+    console.print("\n🚀 [bold blue]Starting AutoApplier Dashboard...[/bold blue]\n")
+    console.print(f"📊 Open in browser: [cyan]http://{host}:{port}[/cyan]\n")
+    
+    try:
+        from src.dashboard.app import run_dashboard
+        run_dashboard(host=host, port=port)
+    except ImportError as e:
+        console.print("[red]Dashboard dependencies not installed.[/red]")
+        console.print("Run: [cyan]pip install fastapi uvicorn jinja2[/cyan]")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+
 
 def main():
     """Main entry point"""

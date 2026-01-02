@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoApplier Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🚀 AutoApplier</h1>
+            <p class="subtitle">Job Application Tracker</p>
+        </header>
+
+        <!-- Stats Cards -->
+        <section class="stats-grid" id="stats">
+            <div class="stat-card stat-total">
+                <div class="stat-value" id="stat-total">0</div>
+                <div class="stat-label">Total Jobs</div>
+            </div>
+            <div class="stat-card stat-applied">
+                <div class="stat-value" id="stat-applied">0</div>
+                <div class="stat-label">Applied</div>
+            </div>
+            <div class="stat-card stat-pending">
+                <div class="stat-value" id="stat-pending">0</div>
+                <div class="stat-label">Pending</div>
+            </div>
+            <div class="stat-card stat-failed">
+                <div class="stat-value" id="stat-failed">0</div>
+                <div class="stat-label">Failed</div>
+            </div>
+        </section>
+
+        <!-- Filters -->
+        <section class="filters">
+            <select id="filter-status" onchange="loadJobs()">
+                <option value="">All Statuses</option>
+                <option value="new">New</option>
+                <option value="applied">Applied</option>
+                <option value="needs_review">Needs Review</option>
+                <option value="failed">Failed</option>
+            </select>
+            <select id="filter-platform" onchange="loadJobs()">
+                <option value="">All Platforms</option>
+                <option value="greenhouse">Greenhouse</option>
+                <option value="lever">Lever</option>
+                <option value="workday">Workday</option>
+                <option value="ashby">Ashby</option>
+                <option value="linkedin_easy">LinkedIn Easy Apply</option>
+            </select>
+            <button onclick="loadJobs()" class="btn-refresh">↻ Refresh</button>
+        </section>
+
+        <!-- Jobs Table -->
+        <section class="jobs-section">
+            <h2>Applications</h2>
+            <table class="jobs-table">
+                <thead>
+                    <tr>
+                        <th>Company</th>
+                        <th>Position</th>
+                        <th>Platform</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="jobs-body">
+                    <tr><td colspan="6" class="loading">Loading...</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- LLM Usage -->
+        <section class="llm-section">
+            <h2>📊 LLM Usage (Free Tier)</h2>
+            <div class="usage-bars">
+                <div class="usage-item">
+                    <label>Daily Requests</label>
+                    <div class="progress-bar">
+                        <div class="progress" id="daily-progress" style="width: 0%"></div>
+                    </div>
+                    <span id="daily-text">0 / 1000</span>
+                </div>
+                <div class="usage-item">
+                    <label>Monthly Tokens</label>
+                    <div class="progress-bar">
+                        <div class="progress" id="monthly-progress" style="width: 0%"></div>
+                    </div>
+                    <span id="monthly-text">0 / 900,000</span>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+            loadJobs();
+            loadLLMUsage();
+        });
+
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+                
+                document.getElementById('stat-total').textContent = data.total;
+                document.getElementById('stat-applied').textContent = data.applied;
+                document.getElementById('stat-pending').textContent = data.pending;
+                document.getElementById('stat-failed').textContent = data.failed;
+            } catch (e) {
+                console.error('Failed to load stats:', e);
+            }
+        }
+
+        async function loadJobs() {
+            const status = document.getElementById('filter-status').value;
+            const platform = document.getElementById('filter-platform').value;
+            
+            let url = '/api/jobs?limit=50';
+            if (status) url += `&status=${status}`;
+            if (platform) url += `&platform=${platform}`;
+            
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                const tbody = document.getElementById('jobs-body');
+                
+                if (data.jobs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="empty">No jobs found</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = data.jobs.map(job => `
+                    <tr>
+                        <td><strong>${escapeHtml(job.company)}</strong></td>
+                        <td>
+                            <a href="${escapeHtml(job.url)}" target="_blank">
+                                ${escapeHtml(job.title)}
+                            </a>
+                        </td>
+                        <td><span class="badge badge-${job.platform}">${job.platform || 'unknown'}</span></td>
+                        <td><span class="status status-${job.status}">${job.status}</span></td>
+                        <td>${formatDate(job.applied_at || job.discovered_at)}</td>
+                        <td>
+                            <select onchange="updateStatus('${job.id}', this.value)">
+                                <option value="">Change...</option>
+                                <option value="applied">✅ Mark Applied</option>
+                                <option value="failed">❌ Mark Failed</option>
+                                <option value="skipped">⏭️ Skip</option>
+                            </select>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error('Failed to load jobs:', e);
+            }
+        }
+
+        async function loadLLMUsage() {
+            try {
+                const res = await fetch('/api/llm-usage');
+                const data = await res.json();
+                
+                if (data.error) {
+                    document.getElementById('daily-text').textContent = 'Not configured';
+                    return;
+                }
+                
+                const dailyPct = (data.daily_requests / data.daily_limit) * 100;
+                const monthlyPct = (data.monthly_tokens / data.monthly_limit) * 100;
+                
+                document.getElementById('daily-progress').style.width = `${dailyPct}%`;
+                document.getElementById('daily-text').textContent = 
+                    `${data.daily_requests} / ${data.daily_limit}`;
+                
+                document.getElementById('monthly-progress').style.width = `${monthlyPct}%`;
+                document.getElementById('monthly-text').textContent = 
+                    `${data.monthly_tokens.toLocaleString()} / ${data.monthly_limit.toLocaleString()}`;
+            } catch (e) {
+                console.error('Failed to load LLM usage:', e);
+            }
+        }
+
+        async function updateStatus(jobId, status) {
+            if (!status) return;
+            
+            try {
+                await fetch(`/api/jobs/${jobId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status })
+                });
+                
+                loadStats();
+                loadJobs();
+            } catch (e) {
+                console.error('Failed to update status:', e);
+            }
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString();
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>"']/g, m => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            })[m]);
+        }
+    </script>
+</body>
+</html>
