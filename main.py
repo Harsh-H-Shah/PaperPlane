@@ -226,14 +226,44 @@ def apply(
         False, "--dry-run", "-d",
         help="Run without actually submitting"
     ),
+    no_scrape: bool = typer.Option(
+        False, "--no-scrape",
+        help="Skip scraping, use existing jobs only"
+    ),
 ):
-    """Apply to jobs in the queue."""
-    mode = "[DRY RUN] " if dry_run else ""
-    console.print(f"\n📝 {mode}[bold blue]Applying to Jobs...[/bold blue]\n")
+    """Apply to jobs in the queue - the main automation command!"""
+    import asyncio
+    from pathlib import Path
     
-    # TODO: Implement auto-apply in Phase 4
-    console.print("[yellow]⚠️ Auto-apply not implemented yet (Phase 4)[/yellow]")
-    console.print("Form fillers are required for autonomous application")
+    mode = "[DRY RUN] " if dry_run else ""
+    console.print(f"\n📝 {mode}[bold blue]AutoApplier Starting...[/bold blue]\n")
+    
+    # Check profile exists
+    if not Path("data/profile.json").exists():
+        console.print("[red]❌ Profile not found![/red]")
+        console.print("Run [cyan]python main.py init[/cyan] first, then edit data/profile.json")
+        return
+    
+    async def run_apply():
+        from src.orchestrator import run_auto_apply
+        
+        try:
+            stats = await run_auto_apply(
+                max_applications=limit,
+                scrape_first=not no_scrape,
+                dry_run=dry_run,
+            )
+            return stats
+        except Exception as e:
+            console.print(f"[red]Error: {e}[/red]")
+            import traceback
+            traceback.print_exc()
+            return None
+    
+    try:
+        asyncio.run(run_apply())
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Stopped by user[/yellow]")
 
 
 @app.command()
