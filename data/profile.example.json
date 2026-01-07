@@ -155,6 +155,21 @@
     "last_updated": "2024-01-01"
   },
   
+  "resume_configurations": {
+    "fullstack": {
+      "title": "Senior Full Stack Engineer",
+      "experience_ids": [0, 1],
+      "project_ids": [0],
+      "skill_categories": ["programming_languages", "frameworks", "cloud_devops"]
+    },
+    "frontend": {
+      "title": "Frontend Engineer",
+      "experience_ids": [1],
+      "project_ids": [0],
+      "skill_categories": ["frameworks", "tools"]
+    }
+  },
+  
   "cover_letter_template": "Dear Hiring Manager,\n\nI am excited to apply for the {position} role at {company}. With {years} years of experience in software development and a strong background in {skills}, I am confident I would be a valuable addition to your team.\n\n{custom_paragraph}\n\nThank you for considering my application. I look forward to discussing how I can contribute to {company}'s success.\n\nBest regards,\n{name}",
   
   "common_answers": {
