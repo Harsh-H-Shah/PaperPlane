@@ -1,0 +1,15 @@
+[Unit]
+Description=AutoApplier Job Scheduler
+After=network.target
+
+[Service]
+Type=simple
+User=harsh
+WorkingDirectory=/home/harsh/Desktop/Projects/AutoApplier
+Environment=PATH=/home/harsh/Desktop/Projects/AutoApplier/.venv/bin
+ExecStart=/home/harsh/Desktop/Projects/AutoApplier/.venv/bin/python main.py scheduler start --interval 2
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target
