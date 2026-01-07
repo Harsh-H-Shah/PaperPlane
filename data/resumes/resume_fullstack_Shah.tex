@@ -1,0 +1,182 @@
+\documentclass[10pt, letterpaper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{xcolor}
+
+% Formatting
+\geometry{left=0.75in, right=0.75in, top=0.6in, bottom=0.6in}
+\pagestyle{empty}
+\raggedright
+
+% Colors
+\definecolor{primary}{RGB}{0, 70, 140} % Professional Blue
+
+% Sections
+\titleformat{\section}{
+  \large\bfseries\color{primary}\uppercase
+}{}{0em}{}[\titlerule]
+
+\titlespacing{\section}{0pt}{12pt}{6pt}
+
+% Custom Commands
+\newcommand{\entry}[4]{
+  \textbf{#1} \hfill #2 \\
+  \textit{#3} \hfill \textit{#4}
+}
+
+\begin{document}
+
+% Header
+\begin{center}
+    {\Huge\textbf{Harsh Shah}} \\ \vspace{4pt}
+    harshmkvviv@gmail.com | +1-5164341033 \\
+    \href{https://linkedin.com/in/harsh-h-shah}{LinkedIn} | \href{https://github.com/harsh-h-shah}{GitHub} | \href{https://www.harsh.software}{Portfolio}
+\end{center}
+
+\vspace{6pt}
+
+% Education
+\section{Education}
+
+\entry{Stony Brook University}{New York, USA}{Master of Science}{2024-08 -- 2026-05}
+\begin{itemize}[noitemsep, topsep=0pt, leftmargin=15pt]
+    \item Relevant Coursework: Algorithms, Operating Systems, Wireless Networks, Data Structures
+\end{itemize}
+\vspace{4pt}
+
+\entry{University of Mumbai – Thadomal Shahani Engineering College}{Mumbai, India}{Bachelor of Engineering}{2020-08 -- 2024-05}
+\begin{itemize}[noitemsep, topsep=0pt, leftmargin=15pt]
+    \item Relevant Coursework: Databases, Computer Networks, Web Systems
+\end{itemize}
+\vspace{4pt}
+
+
+% Experience
+\section{Experience}
+
+\entry{Meta \& Major League Hacking}{Remote}{Production Engineering Fellow}{2025-06 -- 2025-09}
+\begin{itemize}[noitemsep, topsep=0pt, leftmargin=15pt]
+    
+    \item Selected for a competitive 12-week, course-based Production Engineering fellowship with mentorship from industry-experts.
+    
+    \item Built internal dashboards and monitoring UIs using React.js and Chart.js, improving observability for containerized systems.
+    
+    \item Built and deployed backend infrastructure using Docker, Linux, and Nginx for scalable analytics platforms.
+    
+    \item Designed system telemetry pipelines using Prometheus \& Grafana, improving observability \& reliability.
+    
+\end{itemize}
+\vspace{6pt}
+
+\entry{Aumsat Technologies}{Mumbai, India}{Software Developer Intern}{2023-06 -- 2023-10}
+\begin{itemize}[noitemsep, topsep=0pt, leftmargin=15pt]
+    
+    \item Built a ground subsidence detection system processing 500+ geospatial datasets, enabling data-driven urban planning decisions.
+    
+    \item Consumed Python/Flask APIs and integrated map-based visualizations using Leaflet.js and custom UI widgets.
+    
+    \item Performed backend automation \& data pipeline optimization in Python, reducing processing times by 40\%.
+    
+\end{itemize}
+\vspace{6pt}
+
+
+% Projects
+\section{Projects}
+
+\textbf{ZapMap Electric Vehicle Charging Station Locator} \hfill \href{https://github.com/Harsh-H-Shah/ZapMap}{Link} \\
+\textit{Flutter, Flask, Docker}
+\begin{itemize}[noitemsep, topsep=0pt, leftmargin=15pt]
+    
+    \item Designed an EV charging platform with microservices, REST APIs, serving 100+ stations at 98\% uptime.
+    
+    \item Engineered a custom A* pathfinding algorithm, cutting route calculation time by 60\% vs. Dijkstra’s algorithm.
+    
+    \item Integrated 3+ APIs (TomTom, eDRV, Stripe) for navigation, charger status, and secure payments with 99.9\% availability.
+    
+\end{itemize}
+\vspace{4pt}
+
+\textbf{Rashi Pay - Offline Payment Interface} \hfill \href{}{Link} \\
+\textit{React Native, TailwindCSS, Express.js}
+\begin{itemize}[noitemsep, topsep=0pt, leftmargin=15pt]
+    
+    \item Built an offline digital payment app using Bluetooth, enabling 40\% faster P2P transfers without internet.
+    
+    \item Winner of Smart India Hackathon 2022 among 400 teams, delivering a cross-platform solution with React Native + Express.js.
+    
+    \item Secured 10,000+ test transactions via 2048-bit RSA encryption, ensuring safe and reliable P2P payments.
+    
+\end{itemize}
+\vspace{4pt}
+
+\textbf{Alpha Trading} \hfill \href{https://github.com/Harsh-H-Shah/Alpha-trading}{Link} \\
+\textit{React.js, Firebase, TailwindCSS}
+\begin{itemize}[noitemsep, topsep=0pt, leftmargin=15pt]
+    
+    \item Developed a real-time paper trading platform with live updates for 500+ NSE stocks.
+    
+    \item Achieved 85\% prediction accuracy using an LSTM model for 30-day stock forecasting.
+    
+    \item Optimized platform performance with efficient state management and real-time data streaming.
+    
+\end{itemize}
+\vspace{4pt}
+
+
+% Skills
+\section{Technical Skills}
+\begin{itemize}[noitemsep, topsep=0pt, leftmargin=15pt]
+    
+    
+    \item \textbf{ Programming Languages:} Python, Java, C++, JavaScript, TypeScript
+    
+    
+    
+    \item \textbf{ Frontend Development:} React.js, Next.js, Angular (basics), component-driven UI
+    
+    
+    
+    \item \textbf{ Backend Development:} REST, GraphQL, gRPC, microservices, object-oriented design
+    
+    
+    
+    \item \textbf{ Databases:} PostgreSQL, MySQL, MongoDB, Redis
+    
+    
+    
+    \item \textbf{ Cloud Platforms:} AWS, Azure, GCP, Cisco Cloud
+    
+    
+\end{itemize}
+
+% Achievements
+
+\section{Achievements}
+\begin{itemize}[noitemsep, topsep=0pt, leftmargin=15pt]
+    
+    \item \textbf{ Winner at HopperHacks 2025 \& HackNYU 2025 } (2025) -- Best Overall Project \& Best Use of Streamlit among 235+ projects.
+    
+    \item \textbf{ Ranked top 20 at Harbinger 2.0 RBI International hackathon } (2023) -- Out of 363 teams from 22 countries for scalable blockchains.
+    
+    \item \textbf{ Winner at Smart India Hackathon 2022 } (2022) -- Among 30,000 teams nationwide for developing an offline payments interface.
+    
+\end{itemize}
+
+
+% Publications
+
+\section{Publications}
+\begin{itemize}[noitemsep, topsep=0pt, leftmargin=15pt]
+    
+    \item ``A Cloud-Based Architecture for EV Charge Station Finder with Efficient Scheduling'', \textit{ CSA 2024 Conference } (2024).
+    
+\end{itemize}
+
+
+\end{document}

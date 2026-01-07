@@ -1,0 +1,108 @@
+\documentclass[10pt, letterpaper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{xcolor}
+
+% Formatting
+\geometry{left=0.75in, right=0.75in, top=0.6in, bottom=0.6in}
+\pagestyle{empty}
+\raggedright
+
+% Colors
+\definecolor{primary}{RGB}{0, 70, 140} % Professional Blue
+
+% Sections
+\titleformat{\section}{
+  \large\bfseries\color{primary}\uppercase
+}{}{0em}{}[\titlerule]
+
+\titlespacing{\section}{0pt}{12pt}{6pt}
+
+% Custom Commands
+\newcommand{\entry}[4]{
+  \textbf{#1} \hfill #2 \\
+  \textit{#3} \hfill \textit{#4}
+}
+
+\begin{document}
+
+% Header
+\begin{center}
+    {\Huge\textbf{ {{- personal.full_name -}} }} \\ \vspace{4pt}
+    {{ personal.email }} | {{ personal.phone }} \\
+    \href{ {{- personal.linkedin -}} }{LinkedIn} | \href{ {{- personal.github -}} }{GitHub} | \href{ {{- personal.portfolio -}} }{Portfolio}
+\end{center}
+
+\vspace{6pt}
+
+% Education
+\section{Education}
+{% for edu in education %}
+\entry{ {{- edu.institution -}} }{ {{- edu.location -}} }{ {{- edu.degree -}} }{ {{- edu.start_date }} -- {{ edu.end_date -}} }
+\begin{itemize}[noitemsep, topsep=0pt, leftmargin=15pt]
+    \item Relevant Coursework: {{ edu.relevant_coursework | join(', ') }}
+\end{itemize}
+\vspace{4pt}
+{% endfor %}
+
+% Experience
+\section{Experience}
+{% for job in experience %}
+\entry{ {{- job.company -}} }{ {{- job.location -}} }{ {{- job.title -}} }{ {{- job.start_date }} -- {{ job.end_date -}} }
+\begin{itemize}[noitemsep, topsep=0pt, leftmargin=15pt]
+    {% for point in job.highlights %}
+    \item {{ point }}
+    {% endfor %}
+\end{itemize}
+\vspace{6pt}
+{% endfor %}
+
+% Projects
+\section{Projects}
+{% for proj in projects %}
+\textbf{ {{- proj.name -}} } \hfill \href{ {{- proj.url -}} }{Link} \\
+\textit{ {{- proj.technologies | join(', ') -}} }
+\begin{itemize}[noitemsep, topsep=0pt, leftmargin=15pt]
+    {% for point in proj.highlights %}
+    \item {{ point }}
+    {% endfor %}
+\end{itemize}
+\vspace{4pt}
+{% endfor %}
+
+% Skills
+\section{Technical Skills}
+\begin{itemize}[noitemsep, topsep=0pt, leftmargin=15pt]
+    {% for category, items in skills.items() %}
+    {% if items %}
+    \item \textbf{ {{ category | replace('_', ' ') }}:} {{ items | join(', ') }}
+    {% endif %}
+    {% endfor %}
+\end{itemize}
+
+% Achievements
+{% if achievements %}
+\section{Achievements}
+\begin{itemize}[noitemsep, topsep=0pt, leftmargin=15pt]
+    {% for ach in achievements %}
+    \item \textbf{ {{ ach.name }} } ({{ ach.year }}) -- {{ ach.description }}
+    {% endfor %}
+\end{itemize}
+{% endif %}
+
+% Publications
+{% if publications %}
+\section{Publications}
+\begin{itemize}[noitemsep, topsep=0pt, leftmargin=15pt]
+    {% for pub in publications %}
+    \item ``{{ pub.title }}'', \textit{ {{ pub.conference }} } ({{ pub.year }}).
+    {% endfor %}
+\end{itemize}
+{% endif %}
+
+\end{document}
