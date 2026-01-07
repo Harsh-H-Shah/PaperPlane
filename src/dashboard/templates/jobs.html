@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}Jobs - AutoApplier{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1 class="page-title">All Jobs</h1>
+        <p class="page-subtitle" id="job-count">Loading...</p>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <input type="text" class="search-input" id="search" placeholder="Search by title or company..." oninput="debouncedSearch()">
+        <select class="filter-select" id="filter-status" onchange="loadJobs(true)">
+            <option value="">All Statuses</option>
+            <option value="new">New</option>
+            <option value="applied">Applied</option>
+            <option value="failed">Failed</option>
+            <option value="needs_review">Needs Review</option>
+            <option value="expired">Expired</option>
+            <option value="skipped">Skipped</option>
+        </select>
+        <select class="filter-select" id="filter-source" onchange="loadJobs(true)">
+            <option value="">All Sources</option>
+            <option value="simplify">Simplify</option>
+            <option value="jobright">Jobright</option>
+            <option value="dice">Dice</option>
+            <option value="builtin">BuiltIn</option>
+            <option value="handshake">Handshake</option>
+            <option value="linkedin">LinkedIn</option>
+            <option value="cvrve">CVRVE</option>
+        </select>
+        <button onclick="loadJobs(true)" class="btn btn-ghost">↻ Refresh</button>
+    </div>
+
+    <!-- Jobs List -->
+    <div class="jobs-list" id="jobs-list"></div>
+    
+    <!-- Loading indicator -->
+    <div class="loading-more" id="loading-more" style="display: none;">
+        <div class="loading-spinner"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentPage = 1;
+let isLoading = false;
+let hasMore = true;
+let searchTimeout = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Parse URL params
+    const params = new URLSearchParams(window.location.search);
+    const statusParam = params.get('status');
+    const searchParam = params.get('search');
+    
+    if (statusParam) {
+        document.getElementById('filter-status').value = statusParam;
+    }
+    
+    if (searchParam) {
+        document.getElementById('search').value = searchParam;
+    }
+
+    loadJobs(true);
+    setupInfiniteScroll();
+});
+
+function setupInfiniteScroll() {
+    window.addEventListener('scroll', () => {
+        if (isLoading || !hasMore) return;
+        
+        const scrollBottom = window.innerHeight + window.scrollY;
+        const docHeight = document.documentElement.scrollHeight;
+        
+        if (scrollBottom >= docHeight - 200) {
+            loadJobs(false);
+        }
+    });
+}
+
+function debouncedSearch() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => loadJobs(true), 300);
+}
+
+async function loadJobs(reset = false) {
+    if (isLoading) return;
+    
+    if (reset) {
+        currentPage = 1;
+        hasMore = true;
+        document.getElementById('jobs-list').innerHTML = '';
+    }
+    
+    isLoading = true;
+    document.getElementById('loading-more').style.display = 'flex';
+    
+    const status = document.getElementById('filter-status').value;
+    const source = document.getElementById('filter-source').value;
+    const search = document.getElementById('search').value;
+    
+    let url = `/api/jobs?page=${currentPage}&per_page=50`;
+    if (status) url += `&status=${status}`;
+    if (source) url += `&source=${source}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    
+    try {
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        document.getElementById('job-count').textContent = `${data.total} jobs found`;
+        
+        const container = document.getElementById('jobs-list');
+        
+        if (data.jobs.length === 0 && reset) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <div>No jobs found</div>
+                </div>
+            `;
+        } else {
+            const html = data.jobs.map((job, i) => `
+                <div class="job-item" style="animation-delay: ${i * 30}ms">
+                    <div class="job-info">
+                        <div class="job-title">
+                            <a href="${escapeHtml(job.url)}" target="_blank">${escapeHtml(job.title)}</a>
+                        </div>
+                        <div class="job-meta">
+                            <span class="job-company">${escapeHtml(job.company) || 'Unknown'}</span>
+                            <span>${escapeHtml(job.location) || ''}</span>
+                        </div>
+                    </div>
+                    <span class="job-source">${formatSource(job.source)}</span>
+                    <span class="job-status ${job.status}">${job.status}</span>
+                    <span class="job-date">${formatDate(job.discovered_at)}</span>
+                    <div class="job-actions">
+                        <select onchange="updateStatus('${job.id}', this.value)">
+                            <option value="">Action</option>
+                            <option value="applied">✓ Applied</option>
+                            <option value="skipped">✗ Skip</option>
+                        </select>
+                    </div>
+                </div>
+            `).join('');
+            
+            container.insertAdjacentHTML('beforeend', html);
+        }
+        
+        hasMore = data.has_more;
+        currentPage++;
+    } catch (e) {
+        console.error('Failed to load jobs:', e);
+    } finally {
+        isLoading = false;
+        document.getElementById('loading-more').style.display = 'none';
+    }
+}
+
+async function updateStatus(jobId, status) {
+    if (!status) return;
+    
+    try {
+        await fetch(`/api/jobs/${jobId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+        });
+        loadJobs(true);
+    } catch (e) {
+        console.error('Failed to update:', e);
+    }
+}
+</script>
+{% endblock %}

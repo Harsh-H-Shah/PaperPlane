@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AutoApplier{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css?v=2">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-brand">
+            <a href="/" style="display: flex; align-items: center; gap: 12px; text-decoration: none;">
+                <div class="nav-logo">⚡</div>
+                <span class="nav-title">AutoApplier</span>
+            </a>
+        </div>
+        <div class="nav-links">
+            <a href="/" class="nav-link {% if page == 'dashboard' %}active{% endif %}">Dashboard</a>
+            <a href="/jobs" class="nav-link {% if page == 'jobs' %}active{% endif %}">Jobs</a>
+            <a href="/settings" class="nav-link {% if page == 'settings' %}active{% endif %}">Settings</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Base Scripts -->
+    <script>
+        function formatDate(dateStr) {
+            if (!dateStr) return '—';
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = now - date;
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            
+            if (hours < 1) return 'Just now';
+            if (hours < 24) return `${hours}h ago`;
+            if (days === 1) return 'Yesterday';
+            if (days < 7) return `${days}d ago`;
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>"']/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[m]);
+        }
+
+        function formatSource(source) {
+            const map = {
+                'simplify': 'Simplify', 
+                'cvrve': 'CVRVE', 
+                'jobright': 'Jobright', 
+                'dice': 'Dice',
+                'builtin': 'BuiltIn',
+                'handshake': 'Handshake',
+                'other': 'Other', 
+                'linkedin': 'LinkedIn'
+            };
+            return map[source?.toLowerCase()] || source || 'Other';
+        }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

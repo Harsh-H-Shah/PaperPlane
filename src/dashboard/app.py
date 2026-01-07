@@ -1,12 +1,9 @@
-"""
-Dashboard API - FastAPI backend for the web dashboard
-"""
-
 from datetime import datetime
 from typing import Optional
 from pathlib import Path
+import asyncio
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -16,65 +13,51 @@ from src.utils.database import get_db
 from src.utils.config import get_settings
 from src.core.job import JobStatus, ApplicationType
 
-# Create FastAPI app
-app = FastAPI(
-    title="AutoApplier Dashboard",
-    description="Monitor and manage your job applications",
-    version="1.0.0"
-)
+app = FastAPI(title="AutoApplier Dashboard", version="2.0.0")
 
-# Static files and templates
 DASHBOARD_DIR = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=DASHBOARD_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=DASHBOARD_DIR / "templates")
 
-
-# ============= API Models =============
 
 class JobUpdate(BaseModel):
     status: Optional[str] = None
     notes: Optional[str] = None
 
 
-class StatsResponse(BaseModel):
-    total: int
-    applied: int
-    pending: int
-    failed: int
-    needs_review: int
-    by_platform: dict
-    by_source: dict
-    recent_applications: list
+class ScrapeRequest(BaseModel):
+    sources: Optional[list[str]] = None
+    limit: int = 200
 
 
-# ============= API Routes =============
+# ============ Pages ============
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    """Main dashboard page"""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse("index.html", {"request": request, "page": "dashboard"})
 
+
+@app.get("/jobs", response_class=HTMLResponse)
+async def jobs_page(request: Request):
+    return templates.TemplateResponse("jobs.html", {"request": request, "page": "jobs"})
+
+
+@app.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request):
+    return templates.TemplateResponse("settings.html", {"request": request, "page": "settings"})
+
+
+# ============ API ============
 
 @app.get("/api/stats")
 async def get_stats():
-    """Get application statistics"""
     db = get_db()
     stats = db.get_job_stats()
     
-    # Get additional breakdowns
     from sqlalchemy import func
     from src.utils.database import JobModel
     
     with db.session() as session:
-        # Count by platform
-        by_platform = {}
-        platform_counts = session.query(
-            JobModel.application_type, func.count(JobModel.id)
-        ).group_by(JobModel.application_type).all()
-        for platform, count in platform_counts:
-            by_platform[platform or "unknown"] = count
-        
-        # Count by source
         by_source = {}
         source_counts = session.query(
             JobModel.source, func.count(JobModel.id)
@@ -82,25 +65,17 @@ async def get_stats():
         for source, count in source_counts:
             by_source[source or "unknown"] = count
         
-        # Get recent applications
         recent = session.query(JobModel).filter(
             JobModel.status == JobStatus.APPLIED.value
-        ).order_by(JobModel.applied_at.desc()).limit(10).all()
+        ).order_by(JobModel.applied_at.desc()).limit(5).all()
         
         recent_apps = [
-            {
-                "id": j.id,
-                "title": j.title,
-                "company": j.company,
-                "applied_at": j.applied_at.isoformat() if j.applied_at else None,
-            }
+            {"id": j.id, "title": j.title, "company": j.company, "applied_at": j.applied_at.isoformat() if j.applied_at else None}
             for j in recent
         ]
     
     return {
         **stats,
-        "needs_review": 0,  # TODO: Track this separately
-        "by_platform": by_platform,
         "by_source": by_source,
         "recent_applications": recent_apps,
     }
@@ -108,14 +83,13 @@ async def get_stats():
 
 @app.get("/api/jobs")
 async def list_jobs(
-    status: Optional[str] = None,
-    platform: Optional[str] = None,
-    limit: int = 50,
-    offset: int = 0,
+    status: Optional[str] = None, 
+    source: Optional[str] = None,
+    search: Optional[str] = None,
+    page: int = 1,
+    per_page: int = 50
 ):
-    """List jobs with optional filters"""
     db = get_db()
-    
     from src.utils.database import JobModel
     
     with db.session() as session:
@@ -124,26 +98,36 @@ async def list_jobs(
         if status:
             query = query.filter(JobModel.status == status)
         
-        if platform:
-            query = query.filter(JobModel.application_type == platform)
+        if source:
+            query = query.filter(JobModel.source == source)
+        
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                (JobModel.title.ilike(search_term)) | 
+                (JobModel.company.ilike(search_term))
+            )
         
         total = query.count()
-        jobs = query.order_by(JobModel.discovered_at.desc()).offset(offset).limit(limit).all()
+        offset = (page - 1) * per_page
+        jobs = query.order_by(JobModel.discovered_at.desc()).offset(offset).limit(per_page).all()
         
         return {
             "total": total,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": (total + per_page - 1) // per_page,
+            "has_more": offset + len(jobs) < total,
             "jobs": [
                 {
-                    "id": j.id,
-                    "title": j.title,
-                    "company": j.company,
+                    "id": j.id, 
+                    "title": j.title, 
+                    "company": j.company, 
                     "location": j.location,
-                    "url": j.url,
-                    "status": j.status,
-                    "platform": j.application_type,
+                    "url": j.url, 
+                    "status": j.status, 
                     "source": j.source,
                     "discovered_at": j.discovered_at.isoformat() if j.discovered_at else None,
-                    "applied_at": j.applied_at.isoformat() if j.applied_at else None,
                 }
                 for j in jobs
             ]
@@ -152,7 +136,6 @@ async def list_jobs(
 
 @app.get("/api/jobs/{job_id}")
 async def get_job(job_id: str):
-    """Get a specific job"""
     db = get_db()
     job = db.get_job(job_id)
     
@@ -164,9 +147,7 @@ async def get_job(job_id: str):
 
 @app.patch("/api/jobs/{job_id}")
 async def update_job(job_id: str, update: JobUpdate):
-    """Update a job's status"""
     db = get_db()
-    
     from src.utils.database import JobModel
     
     with db.session() as session:
@@ -187,9 +168,108 @@ async def update_job(job_id: str, update: JobUpdate):
     return {"success": True}
 
 
+@app.get("/api/scrapers/status")
+async def get_scraper_status():
+    settings = get_settings()
+    
+    scrapers = [
+        {
+            "name": "Simplify",
+            "enabled": settings.scrapers.simplify.enabled,
+            "configured": True,
+            "icon": "📦"
+        },
+        {
+            "name": "CVRVE",
+            "enabled": settings.scrapers.cvrve.enabled,
+            "configured": True,
+            "icon": "🎯"
+        },
+        {
+            "name": "LinkedIn",
+            "enabled": settings.scrapers.linkedin.enabled,
+            "configured": bool(settings.linkedin_li_at),
+            "icon": "💼",
+            "note": "Requires LINKEDIN_LI_AT cookie" if not settings.linkedin_li_at else None
+        },
+        {
+            "name": "Jobright",
+            "enabled": True,
+            "configured": True,
+            "icon": "🚀"
+        },
+        {
+            "name": "Dice",
+            "enabled": True,
+            "configured": True,
+            "icon": "🎲"
+        },
+        {
+            "name": "WeWorkRemotely",
+            "enabled": True,
+            "configured": True,
+            "icon": "🌍"
+        },
+    ]
+    
+    return {"scrapers": scrapers}
+
+
+# Global state for scrape progress
+SCRAPE_STATUS = {
+    "is_running": False,
+    "current_source": "",
+    "jobs_found": 0,
+    "jobs_new": 0,
+    "last_updated": None
+}
+
+@app.get("/api/scrape/progress")
+async def get_scrape_progress():
+    return SCRAPE_STATUS
+
+@app.post("/api/scrape")
+async def trigger_scrape(request: ScrapeRequest, background_tasks: BackgroundTasks):
+    if SCRAPE_STATUS["is_running"]:
+        return {"status": "error", "message": "Scrape already in progress"}
+        
+    async def run_scrape_wrapper():
+        global SCRAPE_STATUS
+        SCRAPE_STATUS["is_running"] = True
+        SCRAPE_STATUS["jobs_found"] = 0
+        SCRAPE_STATUS["jobs_new"] = 0
+        SCRAPE_STATUS["last_updated"] = datetime.now()
+        
+        try:
+            from src.scrapers.aggregator import JobAggregator
+            # Run manually to update progress
+            agg = JobAggregator(validate_links=False)
+            
+            sources = request.sources or [s.SOURCE_NAME.lower() for s in agg.scrapers]
+            
+            for source in sources:
+                SCRAPE_STATUS["current_source"] = source
+                SCRAPE_STATUS["last_updated"] = datetime.now()
+                
+                try:
+                    jobs, raw_count = await agg.scrape_source(source, limit=request.limit)
+                    SCRAPE_STATUS["jobs_found"] += raw_count
+                    SCRAPE_STATUS["jobs_new"] += len(jobs)
+                except Exception as e:
+                    print(f"Scrape error {source}: {e}")
+            
+            SCRAPE_STATUS["current_source"] = "Done"
+            
+        finally:
+            SCRAPE_STATUS["is_running"] = False
+            SCRAPE_STATUS["current_source"] = ""
+            
+    background_tasks.add_task(run_scrape_wrapper)
+    return {"status": "started", "message": "Scraping started"}
+
+
 @app.get("/api/llm-usage")
 async def get_llm_usage():
-    """Get LLM API usage stats"""
     try:
         from src.llm.gemini import GeminiClient
         settings = get_settings()
@@ -203,10 +283,7 @@ async def get_llm_usage():
         return {"error": str(e)}
 
 
-# ============= Run Server =============
-
 def run_dashboard(host: str = "127.0.0.1", port: int = 8080):
-    """Run the dashboard server"""
     import uvicorn
     print(f"\n🚀 Starting AutoApplier Dashboard at http://{host}:{port}\n")
     uvicorn.run(app, host=host, port=port)
