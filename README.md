@@ -6,76 +6,67 @@ AutoApplier is a free, open-source tool that automates the job application proce
 
 ## ✨ Features
 
-- **Multi-Source Job Discovery**: Aggregates jobs from LinkedIn, Jobright, Simplify, CVRVE, and company career pages
+- **Multi-Source Job Discovery**: Aggregates jobs from LinkedIn, Jobright, Simplify, CVRVE, BuiltIn, Dice, Y Combinator, and more
 - **Smart Application Categorization**: Recognizes Workday, Ashby, ADP, Oracle, Greenhouse, Lever, and custom forms
 - **Intelligent Form Filling**: Auto-fills applications using your profile data
 - **LLM-Powered Responses**: Uses Gemini Pro (or other LLMs) for open-ended questions
-- **Human-in-the-Loop**: Notifies you via webhook when manual input is required
+- **Human-in-the-Loop**: Notifies you via Discord/ntfy when manual input is required
+- **Resume Generation**: Creates tailored PDF resumes for specific job types
 - **Completely Free**: No paid services required
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        AutoApplier                               │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              │
-│  │   Job       │  │  Application│  │   Form      │              │
-│  │  Scraper    │──│  Classifier │──│   Filler    │              │
-│  └─────────────┘  └─────────────┘  └─────────────┘              │
-│         │                │                │                      │
-│         ▼                ▼                ▼                      │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              │
-│  │   Data      │  │    LLM      │  │  Webhook    │              │
-│  │   Store     │  │  Integration│  │  Notifier   │              │
-│  └─────────────┘  └─────────────┘  └─────────────┘              │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                            AutoApplier                                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐             │
+│  │   Scrapers   │ ──▶ │   Filters    │ ──▶ │  Classifiers │             │
+│  │  (Job Disc.) │     │ (Entry-level)│     │  (ATS Type)  │             │
+│  └──────────────┘     └──────────────┘     └──────────────┘             │
+│         │                                          │                     │
+│         ▼                                          ▼                     │
+│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐             │
+│  │   Database   │ ◀─▶ │ Orchestrator │ ──▶ │   Fillers    │             │
+│  │   (SQLite)   │     │  (Workflow)  │     │ (Form Auto)  │             │
+│  └──────────────┘     └──────────────┘     └──────────────┘             │
+│                              │                     │                     │
+│                              ▼                     ▼                     │
+│                       ┌──────────────┐     ┌──────────────┐             │
+│                       │   Notifier   │     │  LLM Client  │             │
+│                       │(Discord/ntfy)│     │ (Gemini Pro) │             │
+│                       └──────────────┘     └──────────────┘             │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-## 📁 Project Structure
+## 🔄 How It Works
 
-```
-AutoApplier/
-├── src/
-│   ├── scrapers/           # Job discovery from various sources
-│   │   ├── linkedin.py
-│   │   ├── jobright.py
-│   │   ├── simplify.py
-│   │   ├── cvrve.py
-│   │   └── career_sites.py
-│   ├── classifiers/        # Application type detection
-│   │   ├── workday.py
-│   │   ├── ashby.py
-│   │   ├── greenhouse.py
-│   │   └── detector.py
-│   ├── fillers/            # Form automation
-│   │   ├── base_filler.py
-│   │   ├── workday_filler.py
-│   │   ├── ashby_filler.py
-│   │   └── generic_filler.py
-│   ├── llm/                # LLM integration
-│   │   ├── gemini.py
-│   │   └── prompts.py
-│   ├── notifier/           # Webhook notifications
-│   │   └── webhook.py
-│   ├── core/               # Core functionality
-│   │   ├── applicant.py
-│   │   ├── job.py
-│   │   └── application.py
-│   └── utils/              # Utilities
-│       ├── browser.py
-│       └── config.py
-├── data/
-│   ├── profile.json        # Your personal information
-│   ├── resume.json         # Parsed resume data
-│   └── applications.db     # SQLite database for tracking
-├── config/
-│   └── settings.yaml       # Configuration file
-├── tests/                  # Unit and integration tests
-├── requirements.txt
-├── .env.example
-└── main.py
-```
+1. **Job Discovery**: Scrapers aggregate job listings from multiple sources (LinkedIn, CVRVE, Simplify, etc.)
+2. **Filtering**: The JobFilter removes senior/lead roles and keeps entry-level/junior positions
+3. **Link Validation**: Dead links, phishing attempts, and suspicious domains are filtered out
+4. **Classification**: The detector identifies the ATS type (Greenhouse, Lever, Workday, etc.)
+5. **Form Filling**: Platform-specific fillers auto-populate application forms using your profile
+6. **LLM Assistance**: Open-ended questions are answered using Gemini Pro with your context
+7. **Notifications**: When human input is needed, you're notified via Discord or ntfy
+
+## 🧠 Technical Principles
+
+### Modular Plugin Architecture
+Each component (scrapers, fillers, classifiers) follows a base class pattern, making it easy to add new job sources or ATS platforms without modifying core logic.
+
+### Async-First Design
+All I/O-bound operations (web scraping, API calls, form interactions) use Python's `asyncio` for efficient parallel processing. The `JobAggregator` scrapes multiple sources concurrently.
+
+### Human-in-the-Loop (HITL)
+The system prioritizes automation but recognizes its limits. When encountering CAPTCHAs, complex questions, or unfamiliar forms, it pauses and notifies you rather than guessing.
+
+### Incremental Processing
+The `IncrementalScraper` tracks seen URLs to avoid reprocessing. Jobs are stored in SQLite with status tracking, ensuring no duplicate applications.
+
+### LLM-Powered Intelligence
+Context-aware prompts feed your profile, resume, and job description to Gemini Pro. The `AnswerValidator` ensures responses are appropriate before submission.
 
 ## 🚀 Quick Start
 
@@ -97,22 +88,48 @@ cp data/profile.example.json data/profile.json
 
 # Configure settings
 cp .env.example .env
-# Add your Gemini API key and webhook URL
+# Add your Gemini API key and notification webhook
 
-# Run
-python main.py
+# Run the dashboard
+python main.py dashboard
+
+# Or scrape jobs manually
+python main.py scrape --limit 50
+
+# Apply to jobs
+python main.py apply --limit 5
 ```
+
+## 📋 CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `status` | Show system status and statistics |
+| `scrape` | Discover new jobs from all sources |
+| `jobs` | List jobs with optional status filter |
+| `apply` | Auto-apply to pending jobs |
+| `apply-url` | Apply to a specific job URL |
+| `dashboard` | Launch the web dashboard |
+| `scheduler` | Start automated scraping scheduler |
+| `resume` | Generate a tailored PDF resume |
+| `h1b-sponsors` | Fetch H1B sponsor company data |
+| `llm-usage` | Show LLM API usage statistics |
 
 ## 📋 Requirements
 
 - Python 3.10+
-- Chrome/Chromium browser (for Selenium/Playwright)
+- Chrome/Chromium browser (for Playwright)
 - Gemini Pro API key (free tier available)
-- Optional: Discord/Telegram webhook for notifications
+- Optional: Discord webhook or ntfy topic for notifications
 
 ## 🔧 Configuration
 
-See `config/settings.yaml` for all configuration options.
+All configuration is managed via environment variables (`.env` file):
+
+- `GEMINI_API_KEY`: Your Gemini API key
+- `DISCORD_WEBHOOK_URL`: Discord webhook for notifications
+- `NTFY_TOPIC`: ntfy.sh topic for mobile notifications
+- `EMAIL_USER` / `EMAIL_PASSWORD`: For email verification code extraction
 
 ## 📜 License
 
