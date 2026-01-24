@@ -222,20 +222,40 @@ class AshbyFiller(BaseFiller):
         return name_filled and email_filled
 
     async def _upload_resume(self, page: Page) -> bool:
+        from pathlib import Path
+        
         if not self.applicant.resume or not self.applicant.resume.file_path:
             return False
-            
-        resume_path = self.applicant.resume.file_path
+        
+        resume_path_str = self.applicant.resume.file_path
+        resume_path = None
+        
+        # Resolve resume path - check multiple locations
+        candidates = [
+            Path(resume_path_str),  # As-is (relative to CWD)
+            Path.cwd().parent / resume_path_str,  # Relative to parent (project root)
+            Path(__file__).parent.parent.parent.parent / resume_path_str,  # Relative to src/
+        ]
+        
+        for candidate in candidates:
+            if candidate.exists():
+                resume_path = str(candidate.resolve())
+                print(f"   📁 Found resume at: {resume_path}")
+                break
+        
+        if not resume_path:
+            print(f"   ❌ Resume not found! Tried: {[str(c) for c in candidates]}")
+            return False
         
         # Try finding standard file input
         file_input = page.locator(self.SELECTORS["resume"]).first
         if await file_input.count() > 0:
             try:
                 await file_input.set_input_files(resume_path)
+                print(f"   ✅ Resume uploaded via primary selector")
                 return True
             except Exception as e:
                 print(f"   ❌ Resume upload failed: {e}")
-                return False
         
         # Sometimes Ashby has a hidden input we need to unhide or just target directly
         all_file_inputs = page.locator("input[type='file']")
@@ -243,9 +263,11 @@ class AshbyFiller(BaseFiller):
         for i in range(count):
             try:
                 await all_file_inputs.nth(i).set_input_files(resume_path)
+                print(f"   ✅ Resume uploaded via fallback file input #{i}")
                 return True
             except: continue
             
+        print("   ❌ No file input found for resume upload")
         return False
 
     async def _fill_online_presence(self, page: Page) -> None:

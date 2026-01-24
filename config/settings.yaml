@@ -19,10 +19,10 @@ application:
 browser:
   # Browser type: chromium, firefox, webkit
   type: chromium
-  # Run in headless mode
-  headless: false
-  # Slow down actions for debugging (ms)
-  slow_mo: 500
+  # Run in headless mode (true = no visible browser window)
+  headless: true
+  # Slow down actions for debugging (ms) - set to 0 for faster execution
+  slow_mo: 100
   # Viewport size
   viewport:
     width: 1920

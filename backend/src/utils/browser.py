@@ -109,6 +109,72 @@ class BrowserManager:
                 {"name": "li_at", "value": li_at, "domain": ".linkedin.com", "path": "/"},
                 {"name": "JSESSIONID", "value": jsessionid, "domain": ".linkedin.com", "path": "/"}
             ])
+    
+    async def add_builtin_cookies(self) -> None:
+        """Add BuiltIn session cookies if configured in .env"""
+        if not self.context:
+            return  # Context not initialized yet
+        
+        cookies = []
+        
+        # Add SSESS session cookie
+        if self.settings.builtin_session and self.settings.builtin_session_name:
+            cookies.append({
+                "name": self.settings.builtin_session_name,
+                "value": self.settings.builtin_session,
+                "domain": ".builtin.com",
+                "path": "/",
+                "httpOnly": True,
+                "secure": True,
+                "sameSite": "Lax"
+            })
+        
+        # Add BIX_AUTH cookies (required for full authentication)
+        if self.settings.builtin_bix_auth:
+            cookies.append({
+                "name": "BIX_AUTH",
+                "value": self.settings.builtin_bix_auth,
+                "domain": ".builtin.com",
+                "path": "/",
+                "httpOnly": True,
+                "secure": True,
+                "sameSite": "Lax"
+            })
+        
+        if self.settings.builtin_bix_authc1:
+            cookies.append({
+                "name": "BIX_AUTHC1",
+                "value": self.settings.builtin_bix_authc1,
+                "domain": ".builtin.com",
+                "path": "/",
+                "httpOnly": True,
+                "secure": True,
+                "sameSite": "Lax"
+            })
+        
+        if self.settings.builtin_bix_authc2:
+            cookies.append({
+                "name": "BIX_AUTHC2",
+                "value": self.settings.builtin_bix_authc2,
+                "domain": ".builtin.com",
+                "path": "/",
+                "httpOnly": True,
+                "secure": True,
+                "sameSite": "Lax"
+            })
+        
+        if cookies:
+            await self.context.add_cookies(cookies)
+            print(f"   🍪 BuiltIn cookies added ({len(cookies)} cookies)")
+    
+    async def ensure_builtin_authenticated(self, page: Page) -> bool:
+        """Check if BuiltIn is authenticated, add cookies if not"""
+        if not self.settings.builtin_session:
+            return False
+        
+        # Add cookies before navigating
+        await self.add_builtin_cookies()
+        return True
 
 
 _browser_manager: Optional[BrowserManager] = None

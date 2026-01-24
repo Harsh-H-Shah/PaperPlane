@@ -41,11 +41,32 @@ class LeverFiller(BaseFiller):
             await self._fill_basic_info(page)
             application.add_log("filled_basic", "Filled name, email, phone")
             
-            resume_input = page.locator("input[type='file']").first
-            if await resume_input.count() > 0:
-                await resume_input.set_input_files(self.applicant.resume.file_path)
-                application.resume_uploaded = True
-                application.add_log("uploaded_resume", "Resume uploaded")
+            # Resolve resume path
+            from pathlib import Path
+            resume_path_str = self.applicant.resume.file_path
+            resume_path = None
+            candidates = [
+                Path(resume_path_str),
+                Path.cwd().parent / resume_path_str,
+                Path(__file__).parent.parent.parent.parent / resume_path_str,
+            ]
+            for candidate in candidates:
+                if candidate.exists():
+                    resume_path = str(candidate.resolve())
+                    print(f"   📁 Found resume at: {resume_path}")
+                    break
+            
+            if resume_path:
+                resume_input = page.locator("input[type='file']").first
+                if await resume_input.count() > 0:
+                    await resume_input.set_input_files(resume_path)
+                    application.resume_uploaded = True
+                    application.add_log("uploaded_resume", "Resume uploaded")
+                    print(f"   ✅ Resume uploaded")
+                else:
+                    print("   ⚠️ No file input found for resume")
+            else:
+                print(f"   ❌ Resume file not found")
             
             await self._fill_urls(page)
             await self._handle_custom_questions(page, job, application)

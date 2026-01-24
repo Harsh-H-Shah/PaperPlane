@@ -114,6 +114,19 @@ class Settings(BaseSettings):
     email_user: str = Field(default="", alias="EMAIL_USER")
     email_password: str = Field(default="", alias="EMAIL_PASSWORD")
     
+    # BuiltIn Session Cookies (get from browser after logging in)
+    # To get these: Log into builtin.com, open DevTools > Application > Cookies
+    # Copy ALL of these cookie values:
+    builtin_session_name: str = Field(default="", alias="BUILTIN_SESSION_NAME")  # e.g., "SSESSf025deca82..."
+    builtin_session: str = Field(default="", alias="BUILTIN_SESSION")  # Value of SSESSxxx cookie
+    builtin_bix_auth: str = Field(default="", alias="BUILTIN_BIX_AUTH")  # Value of BIX_AUTH (e.g., "chunks-2")
+    builtin_bix_authc1: str = Field(default="", alias="BUILTIN_BIX_AUTHC1")  # Value of BIX_AUTHC1
+    builtin_bix_authc2: str = Field(default="", alias="BUILTIN_BIX_AUTHC2")  # Value of BIX_AUTHC2
+    
+    # LinkedIn Session Cookies (optional - for LinkedIn Easy Apply)
+    linkedin_li_at: str = Field(default="", alias="LINKEDIN_LI_AT")
+    linkedin_jsessionid: str = Field(default="", alias="LINKEDIN_JSESSIONID")
+    
     headless: bool = Field(default=True, alias="HEADLESS")
     max_applications_per_run: int = Field(default=10, alias="MAX_APPLICATIONS_PER_RUN")
     auto_submit: bool = Field(default=False, alias="AUTO_SUBMIT")

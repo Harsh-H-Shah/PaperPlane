@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional
 from pathlib import Path
 
-from src.core.job import Job, JobStatus, ApplicationType
+from src.core.job import Job, JobStatus, ApplicationType, JobSource
 from src.core.applicant import Applicant
 from src.core.application import Application, ApplicationStatus
 from src.utils.config import get_settings
@@ -227,6 +227,11 @@ class Orchestrator:
     async def _fill_application(self, job: Job, application: Application, filler_class: type[BaseFiller]) -> bool:
         try:
             await self.browser_manager.start()
+            
+            # Add BuiltIn cookies if this is a BuiltIn job
+            if job.source == JobSource.BUILTIN or "builtin.com" in (job.url or ""):
+                await self.browser_manager.add_builtin_cookies()
+            
             page = await self.browser_manager.new_page()
 
             logger.info(f"   🌐 Opening application page...")

@@ -119,7 +119,7 @@ class GreenhouseFiller(BaseFiller):
                     return True
                 except:
                     # Check for success text
-                    content = await page.content().lower()
+                    content = (await page.content()).lower()
                     success_patterns = [
                         "thank you for applying",
                         "application was received",
@@ -298,9 +298,29 @@ class GreenhouseFiller(BaseFiller):
         return f and l and e # Phone is sometimes optional
     
     async def _upload_resume(self, page) -> bool:
-        resume_path = self.applicant.resume.file_path
+        from pathlib import Path
         
-        # Strategy 1: Specific ID or Name
+        resume_path_str = self.applicant.resume.file_path
+        resume_path = None
+        
+        # Resolve resume path - check multiple locations
+        candidates = [
+            Path(resume_path_str),  # As-is (relative to CWD)
+            Path.cwd().parent / resume_path_str,  # Relative to parent (project root)
+            Path(__file__).parent.parent.parent.parent / resume_path_str,  # Relative to src/
+        ]
+        
+        for candidate in candidates:
+            if candidate.exists():
+                resume_path = str(candidate.resolve())
+                print(f"   📁 Found resume at: {resume_path}")
+                break
+        
+        if not resume_path:
+            print(f"   ❌ Resume not found! Tried: {[str(c) for c in candidates]}")
+            return False
+        
+        # Selectors to find file input
         selectors = [
             self.SELECTORS["resume"],
             "input[data-qa='resume-input']",
@@ -312,10 +332,13 @@ class GreenhouseFiller(BaseFiller):
                 el = page.locator(selector).first
                 if await el.count() > 0:
                     await el.set_input_files(resume_path)
+                    print(f"   ✅ Resume uploaded via selector: {selector}")
                     return True
-            except:
+            except Exception as e:
+                print(f"   ⚠️ Failed to upload with {selector}: {e}")
                 continue
                 
+        print("   ❌ No file input found for resume upload")
         return False
     
     async def _fill_online_presence(self, page) -> None:
