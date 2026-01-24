@@ -17,7 +17,7 @@ class ApplicationDetector:
         ApplicationType.TALEO: [r'.*\.taleo\.net', r'tbe\.taleo\.net'],
         ApplicationType.JOBVITE: [r'.*\.jobvite\.com', r'jobs\.jobvite\.com'],
         ApplicationType.SMARTRECRUITERS: [r'.*\.smartrecruiters\.com', r'careers\.smartrecruiters\.com'],
-        ApplicationType.LINKEDIN_EASY: [r'linkedin\.com/jobs/.*easy.*apply', r'linkedin\.com/jobs/view'],
+        ApplicationType.BUILTIN: [r'builtin\.com/job/', r'builtin\.com/jobs/', r'builtinnyc\.com/job/', r'builtinsf\.com/job/', r'builtinboston\.com/job/', r'builtincolorado\.com/job/', r'builtinla\.com/job/', r'builtinseattle\.com/job/', r'builtin Austin\.com/job/', r'builtin Chicago\.com/job/'],
     }
     
     CONTENT_PATTERNS = {
@@ -25,7 +25,7 @@ class ApplicationDetector:
         ApplicationType.ASHBY: [r'ashbyhq', r'ashby-apply'],
         ApplicationType.GREENHOUSE: [r'greenhouse\.io', r'gh-apply', r'greenhouse-application'],
         ApplicationType.LEVER: [r'lever\.co', r'lever-apply'],
-        ApplicationType.LINKEDIN_EASY: [r'easy-apply-modal', r'jobs-apply-button--easy-apply'],
+        ApplicationType.BUILTIN: [r'Apply on company site', r'>Apply Now<'],
     }
     
     def __init__(self):
@@ -83,9 +83,6 @@ class ApplicationDetector:
         
         return ApplicationType.CUSTOM, 0.3
     
-    def is_linkedin_easy_apply(self, url: str, html_content: str = "") -> bool:
-        app_type, _ = self.detect(url, html_content)
-        return app_type == ApplicationType.LINKEDIN_EASY
     
     def get_platform_info(self, app_type: ApplicationType) -> dict:
         info = {
@@ -93,7 +90,6 @@ class ApplicationDetector:
             ApplicationType.ASHBY: {"name": "Ashby", "difficulty": "easy", "multi_step": False, "requires_account": False},
             ApplicationType.GREENHOUSE: {"name": "Greenhouse", "difficulty": "easy", "multi_step": False, "requires_account": False},
             ApplicationType.LEVER: {"name": "Lever", "difficulty": "easy", "multi_step": False, "requires_account": False},
-            ApplicationType.LINKEDIN_EASY: {"name": "LinkedIn Easy Apply", "difficulty": "easy", "multi_step": True, "requires_account": True},
             ApplicationType.ORACLE: {"name": "Oracle/Taleo", "difficulty": "hard", "multi_step": True, "requires_account": True},
             ApplicationType.ADP: {"name": "ADP Workforce", "difficulty": "hard", "multi_step": True, "requires_account": True},
         }

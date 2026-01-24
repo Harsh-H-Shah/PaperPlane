@@ -159,10 +159,16 @@ class Database:
         with self.session() as session:
             existing = session.query(JobModel).filter(JobModel.url == job.url).first()
             if existing:
+                # If manual, reset status to NEW to ensure visibility
+                if job.source == JobSource.MANUAL or job.source == JobSource.MANUAL.value:
+                    existing.status = JobStatus.NEW.value
+                    existing.source = JobSource.MANUAL.value
+                    existing.discovered_at = datetime.now()
                 return existing.id
             
             job_model = JobModel.from_job(job)
             session.add(job_model)
+            session.flush()
         
         return job_id
     
@@ -280,8 +286,8 @@ class Database:
         with self.session() as session:
             job_model = session.query(JobModel).filter(JobModel.id == job_id).first()
             if job_model:
-                job_model.status = status.value
-                if status == JobStatus.APPLIED:
+                job_model.status = status.value if hasattr(status, 'value') else status
+                if status == JobStatus.APPLIED or status == JobStatus.APPLIED.value:
                     job_model.applied_at = datetime.now()
     
     def get_job_stats(self) -> dict:

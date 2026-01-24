@@ -5,12 +5,8 @@ from datetime import datetime
 from src.scrapers.base_scraper import BaseScraper
 from src.scrapers.simplify import SimplifyScraper
 from src.scrapers.cvrve import CVRVEScraper
-from src.scrapers.linkedin import LinkedInScraper
 from src.scrapers.jobright import JobrightScraper
-from src.scrapers.additional_sources import (
-    DiceScraper,
-    BuiltInScraper
-)
+from src.scrapers.additional_sources import BuiltInScraper
 from src.scrapers.link_validator import get_link_validator, get_incremental_scraper
 from src.core.job import Job
 from src.utils.config import get_settings
@@ -37,11 +33,9 @@ class JobAggregator:
         if scraper_config.cvrve.enabled:
             self.scrapers.append(CVRVEScraper())
         
-        if scraper_config.linkedin.enabled:
-            self.scrapers.append(LinkedInScraper())
         
         self.scrapers.append(JobrightScraper())
-        self.scrapers.append(DiceScraper())
+        self.scrapers.append(BuiltInScraper())
     
     async def scrape_all(self, keywords: list[str] = None, location: str = None, limit_per_source: int = 50) -> dict:
         keywords = keywords or self.settings.search.titles
@@ -124,10 +118,8 @@ class JobAggregator:
         scraper_map = {
             "simplify": SimplifyScraper,
             "cvrve": CVRVEScraper,
-            "linkedin": LinkedInScraper,
             "jobright": JobrightScraper,
             "builtin": BuiltInScraper,
-            "dice": DiceScraper,
         }
         
         scraper_class = scraper_map.get(source_lower)

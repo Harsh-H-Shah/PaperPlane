@@ -5,6 +5,7 @@ from typing import Optional
 from datetime import datetime
 
 from src.scrapers.base_scraper import BaseScraper
+from src.scrapers.scraper_utils import parse_date_string
 from src.core.job import Job, JobSource, ApplicationType
 from src.classifiers.detector import detect_application_type
 
@@ -143,6 +144,7 @@ class JobrightScraper(BaseScraper):
                 application_type=app_type,
                 salary_min=salary_min,
                 salary_max=salary_max,
+                posted_date=parse_date_string(job_data.get("publishTimeDesc")),
                 tags=["jobright", "api"],
                 raw_data={
                     "jobright_id": job_data.get("jobId"),

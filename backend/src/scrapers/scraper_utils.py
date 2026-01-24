@@ -1,13 +1,57 @@
+
 import asyncio
 import httpx
 import random
-from datetime import datetime
+import re
+from datetime import datetime, timedelta
 from typing import Optional, TypeVar, Callable, Any
 from dataclasses import dataclass, field
 
 
 T = TypeVar('T')
 
+
+def parse_date_string(date_str: str) -> Optional[datetime]:
+    if not date_str:
+        return None
+    
+    date_str = date_str.strip()
+    
+    # 1. Try generic ISO formats
+    for fmt in ["%Y-%m-%dT%H:%M:%S", "%Y-%m-%d", "%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%SZ"]:
+        try:
+            return datetime.strptime(date_str.split('+')[0], fmt)
+        except ValueError:
+            continue
+            
+    # 2. Try Relative Dates ("2 days ago", "1 month ago")
+    now = datetime.now()
+    try:
+        if "ago" in date_str.lower():
+            value_match = re.search(r'(\d+)', date_str)
+            if not value_match:
+                return None
+            
+            value = int(value_match.group(1))
+            date_low = date_str.lower()
+            
+            if "minute" in date_low:
+                return now - timedelta(minutes=value)
+            elif "hour" in date_low:
+                return now - timedelta(hours=value)
+            elif "day" in date_low:
+                return now - timedelta(days=value)
+            elif "week" in date_low:
+                return now - timedelta(weeks=value)
+            elif "month" in date_low:
+                return now - timedelta(days=value * 30)
+            elif "year" in date_low:
+                return now - timedelta(days=value * 365)
+                
+    except Exception:
+        pass
+        
+    return None
 
 @dataclass
 class ScrapeResult:

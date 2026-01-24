@@ -17,11 +17,9 @@ class JobStatus(str, Enum):
 
 
 class JobSource(str, Enum):
-    LINKEDIN = "linkedin"
     JOBRIGHT = "jobright"
     SIMPLIFY = "simplify"
     CVRVE = "cvrve"
-    DICE = "dice"
     BUILTIN = "builtin"
     WEWORKREMOTELY = "weworkremotely"
     YC_JOBS = "yc_jobs"
@@ -42,8 +40,9 @@ class ApplicationType(str, Enum):
     ICIMS = "icims"
     TALEO = "taleo"
     JOBVITE = "jobvite"
-    LINKEDIN_EASY = "linkedin_easy"
     SMARTRECRUITERS = "smartrecruiters"
+    BUILTIN = "builtin"
+    REDIRECTOR = "redirector"
     CUSTOM = "custom"
     UNKNOWN = "unknown"
 
@@ -84,9 +83,6 @@ class Job(BaseModel):
     def is_actionable(self) -> bool:
         return self.status in [JobStatus.NEW, JobStatus.QUEUED]
     
-    @property  
-    def is_linkedin_easy_apply(self) -> bool:
-        return self.application_type == ApplicationType.LINKEDIN_EASY
     
     def mark_applied(self) -> None:
         self.status = JobStatus.APPLIED

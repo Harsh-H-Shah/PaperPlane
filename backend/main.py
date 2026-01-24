@@ -169,9 +169,15 @@ def apply(
     limit: int = typer.Option(5, "--limit", "-l"),
     dry_run: bool = typer.Option(False, "--dry-run", "-d"),
     no_scrape: bool = typer.Option(False, "--no-scrape"),
+    greenhouse_only: bool = typer.Option(False, "--greenhouse-only", "-g", help="Only apply to Greenhouse jobs"),
+    visible: bool = typer.Option(True, "--visible/--headless", "-v/-h", help="Show browser window"),
 ):
     mode = "[DRY RUN] " if dry_run else ""
     console.print(f"\n📝 {mode}[bold blue]AutoApplier Starting...[/bold blue]\n")
+    
+    from src.utils.config import get_settings
+    settings = get_settings()
+    settings.browser.headless = not visible
     
     if not Path("data/profile.json").exists():
         console.print("[red]❌ Profile not found! Run init first.[/red]")
@@ -179,12 +185,16 @@ def apply(
     
     async def run_apply():
         from src.orchestrator import run_auto_apply
+        from src.core.job import ApplicationType
+        
+        filter_type = ApplicationType.GREENHOUSE if greenhouse_only else None
         
         try:
             stats = await run_auto_apply(
                 max_applications=limit,
                 scrape_first=not no_scrape,
                 dry_run=dry_run,
+                filter_type=filter_type,
             )
             return stats
         except Exception as e:

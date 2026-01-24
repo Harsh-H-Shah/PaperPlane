@@ -120,6 +120,7 @@ class Project(BaseModel):
     name: str
     description: str = ""
     url: str = ""
+    date_range: str = ""
     technologies: list[str] = Field(default_factory=list)
     highlights: list[str] = Field(default_factory=list)
 
@@ -142,6 +143,12 @@ class Resume(BaseModel):
     last_updated: str = ""
 
 
+class Achievement(BaseModel):
+    name: str
+    description: str
+    year: str = ""
+
+
 class Applicant(BaseModel):
     first_name: str = Field(default="")
     last_name: str = Field(default="")
@@ -160,11 +167,55 @@ class Applicant(BaseModel):
     education: list[Education] = Field(default_factory=list)
     skills: Skills = Field(default_factory=Skills)
     projects: list[Project] = Field(default_factory=list)
+    achievements: list[Achievement] = Field(default_factory=list)
     certifications: list[Certification] = Field(default_factory=list)
     languages: list[Language] = Field(default_factory=list)
     resume: Resume = Field(default_factory=Resume)
     cover_letter_template: str = ""
     common_answers: dict[str, str] = Field(default_factory=dict)
+    
+    def get_full_context(self) -> str:
+        """Returns a comprehensive summary of the applicant for LLM context."""
+        context = {
+            "personal": {
+                "name": self.full_name,
+                "email": self.email,
+                "phone": self.phone,
+                "location": str(self.address)
+            },
+            "education": [
+                {
+                    "institution": edu.institution,
+                    "degree": edu.degree,
+                    "field": edu.field,
+                    "location": edu.location,
+                    "dates": f"{edu.start_date} - {edu.end_date}"
+                } for edu in self.education
+            ],
+            "experience": [
+                {
+                    "company": exp.company,
+                    "title": exp.title,
+                    "dates": exp.duration,
+                    "description": exp.description,
+                    "highlights": exp.highlights,
+                    "technologies": exp.technologies
+                } for exp in self.experience
+            ],
+            "skills": {
+                "technical": self.skills.all_technical,
+                "soft": self.skills.soft_skills
+            },
+            "projects": [
+                {
+                    "name": proj.name,
+                    "description": proj.description,
+                    "tech": proj.technologies
+                } for proj in self.projects
+            ],
+            "common_answers": self.common_answers
+        }
+        return json.dumps(context, indent=2)
     
     @classmethod
     def from_file(cls, path: str | Path) -> "Applicant":

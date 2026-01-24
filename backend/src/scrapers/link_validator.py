@@ -111,8 +111,6 @@ class LinkValidator:
             return ApplicationType.JOBVITE
         if "smartrecruiters.com" in url_lower:
             return ApplicationType.SMARTRECRUITERS
-        if "linkedin.com" in url_lower and "easyapply" in url_lower:
-            return ApplicationType.LINKEDIN_EASY
         
         return ApplicationType.UNKNOWN
 
