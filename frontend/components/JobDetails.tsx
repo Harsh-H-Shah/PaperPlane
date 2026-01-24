@@ -23,6 +23,13 @@ export default function JobDetails({ job, onApply, onMarkApplied, onUndo, onDele
            </div>
            
            <div className="bg-[var(--valo-darker)] p-3 border border-white/5 relative overflow-hidden group">
+              <label className="text-[10px] text-[var(--valo-text-dim)] tracking-widest uppercase block mb-1">POSTED</label>
+              <div className="font-mono text-sm text-[var(--valo-cyan)]">
+                {job.posted_date ? new Date(job.posted_date).toLocaleDateString() : 'UNKNOWN'}
+              </div>
+           </div>
+           
+           <div className="bg-[var(--valo-darker)] p-3 border border-white/5 relative overflow-hidden group">
               <label className="text-[10px] text-[var(--valo-text-dim)] tracking-widest uppercase block mb-1">TYPE</label>
               <div className="font-mono text-sm">{job.application_type?.toUpperCase() || 'EASY APPLY'}</div>
            </div>
@@ -53,19 +60,21 @@ export default function JobDetails({ job, onApply, onMarkApplied, onUndo, onDele
             href={job.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-1 py-3 px-4 bg-[var(--valo-cyan)] text-[var(--valo-dark)] font-bold text-center hover:opacity-90 active:scale-95 transition tech-button-solid clip-path-button"
+            className="flex-1 py-3 px-4 bg-[var(--valo-cyan)] text-[var(--valo-dark)] font-bold text-center hover:bg-cyan-300 hover:scale-[1.02] active:scale-95 transition-all duration-200 tech-button-solid clip-path-button shadow-[0_0_15px_rgba(0,255,255,0.1)] hover:shadow-[0_0_20px_rgba(0,255,255,0.3)]"
             style={{ clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)' }}
           >
             VIEW MISSION
           </a>
           
-          {(job.status === 'new' || job.status === 'needs_review') && (
+          {(job.status === 'new' || job.status === 'needs_review' || job.status === 'failed') && (
             <button
               onClick={() => onApply(job.id)}
-              className="flex-1 py-3 px-4 bg-[var(--valo-green)] text-[var(--valo-dark)] font-bold text-center hover:opacity-90 active:scale-95 transition tech-button-solid"
+              className={`flex-1 py-3 px-4 font-bold text-center hover:scale-[1.02] active:scale-95 transition-all duration-200 tech-button-solid shadow-lg ${
+                job.status === 'failed' ? 'bg-[var(--valo-red)] text-white hover:bg-red-400' : 'bg-[var(--valo-green)] text-[var(--valo-dark)] hover:bg-green-400'
+              }`}
               style={{ clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)' }}
             >
-              DEPLOY AGENT
+              {job.status === 'failed' ? 'RETRY DEPLOY' : 'DEPLOY AGENT'}
             </button>
           )}
           

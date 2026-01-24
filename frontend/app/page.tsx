@@ -8,6 +8,7 @@ import CombatHistoryEnhanced from '@/components/CombatHistoryEnhanced';
 import QuickActions from '@/components/QuickActions';
 import Footer from '@/components/Footer';
 import JobDetails from '@/components/JobDetails'; // NEW
+import ActivityFeed from '@/components/ActivityFeed'; // NEW
 import { api, Profile, Gamification, Stats, CombatHistoryItem, Job } from '@/lib/api';
 
 export default function Dashboard() {
@@ -115,10 +116,18 @@ export default function Dashboard() {
 
   const handleAutoApply = async () => {
     setIsApplying(true);
-    setTimeout(() => {
+    try {
+      await api.triggerRun();
+      // We keep the "Applying" state for a moment to show feedback
+      // The actual progress will be visible in the Activity Feed
+      setTimeout(() => {
+        setIsApplying(false);
+        fetchData();
+      }, 2000);
+    } catch (err) {
+      console.error('Auto apply failed:', err);
       setIsApplying(false);
-      fetchData();
-    }, 3000);
+    }
   };
 
   const handleViewJob = async (jobId: string) => {
@@ -219,12 +228,15 @@ export default function Dashboard() {
                 streak={gamification?.streak || 0}
               />
 
-              <CombatHistoryEnhanced
-                history={history}
-                onViewJob={handleViewJob}
-                onApplyJob={handleApplyJob}
-                onMarkApplied={handleMarkApplied}
-              />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                 <ActivityFeed />
+                 <CombatHistoryEnhanced
+                    history={history}
+                    onViewJob={handleViewJob}
+                    onApplyJob={handleApplyJob}
+                    onMarkApplied={handleMarkApplied}
+                  />
+              </div>
             </>
           )}
         </main>

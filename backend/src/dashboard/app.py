@@ -4,13 +4,14 @@ from pathlib import Path
 import asyncio
 import json
 
-from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from sqlalchemy import or_
 from src.utils.database import get_db
 from src.utils.config import get_settings
 from src.core.job import JobStatus, ApplicationType
@@ -60,6 +61,15 @@ TIER_UUID = "03621f52-342b-cf4e-4f86-9350a49c6d04"
 class JobUpdate(BaseModel):
     status: Optional[str] = None
     notes: Optional[str] = None
+
+
+class JobCreate(BaseModel):
+    title: str
+    company: str
+    url: str
+    location: Optional[str] = ""
+    source: Optional[str] = "manual"
+    application_type: Optional[str] = "unknown"
 
 
 class ScrapeRequest(BaseModel):
@@ -255,13 +265,42 @@ async def get_stats():
     }
 
 
+@app.post("/api/jobs")
+@app.post("/api/jobs/")
+async def create_job(job_in: JobCreate):
+    db = get_db()
+    from src.core.job import Job, JobSource, ApplicationType
+    import uuid
+    
+    print(f"DEBUG: Manual job creation request for: {job_in.title} at {job_in.company}")
+    
+    job = Job(
+        title=job_in.title,
+        company=job_in.company,
+        url=job_in.url,
+        id=str(uuid.uuid4()), # Assign new ID for manual entries
+        location=job_in.location or "",
+        source=JobSource.MANUAL,
+        application_type=ApplicationType(job_in.application_type) if job_in.application_type else ApplicationType.UNKNOWN
+    )
+    
+    try:
+        job_id = db.add_job(job)
+        job.id = job_id # Sync ID with database 
+        print(f"   ✅ Job created/reset with ID: {job_id}")
+        return {"id": job_id, "success": True, "job": job.model_dump()}
+    except Exception as e:
+        print(f"   ❌ Error creating job: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/jobs")
 async def list_jobs(
     status: Optional[str] = None, 
     source: Optional[str] = None,
-    job_type: Optional[str] = None, # Renamed to avoid reserved word conflict if any, mapped to type query param usually? FastAPI maps by name. Let's use 'type'.
-    type: Optional[str] = None,
+    app_type: Optional[str] = Query(None, alias="type"),
     search: Optional[str] = None,
+    sort: Optional[str] = "newest",
     page: int = 1,
     per_page: int = 50
 ):
@@ -271,31 +310,38 @@ async def list_jobs(
     with db.session() as session:
         query = session.query(JobModel)
         
-        if status:
+        if status and status != 'all':
             query = query.filter(JobModel.status == status)
-        else:
-            # Default: exclude rejected jobs unless searching
-            if not search:
-                query = query.filter(JobModel.status != JobStatus.REJECTED.value)
+        elif not search:
+            query = query.filter(JobModel.status != JobStatus.REJECTED.value)
         
-        if source:
+        # 2. Source Filter
+        if source and source != 'all':
             query = query.filter(JobModel.source == source)
 
-        if type:
-            query = query.filter(JobModel.application_type == type)
+        if app_type and app_type != 'all':
+            query = query.filter(JobModel.application_type == app_type)
 
-        
         if search:
             search_term = f"%{search}%"
-            query = query.filter(
-                (JobModel.title.ilike(search_term)) | 
-                (JobModel.company.ilike(search_term))
-            )
-        
-        
+            query = query.filter(or_(
+                JobModel.title.ilike(search_term),
+                JobModel.company.ilike(search_term)
+            ))
+
         total = query.count()
         offset = (page - 1) * per_page
-        jobs = query.order_by(JobModel.discovered_at.desc()).offset(offset).limit(per_page).all()
+        
+        # Apply Sorting
+        order_attr = JobModel.discovered_at.desc() # Default
+        if sort == "oldest":
+            order_attr = JobModel.discovered_at.asc()
+        elif sort == "company":
+            order_attr = JobModel.company.asc()
+        elif sort == "title":
+            order_attr = JobModel.title.asc()
+            
+        jobs = query.order_by(order_attr).offset(offset).limit(per_page).all()
         
         return {
             "total": total,
@@ -315,6 +361,7 @@ async def list_jobs(
                     "application_type": j.application_type,
                     "apply_url": j.apply_url,
                     "discovered_at": j.discovered_at.isoformat() if j.discovered_at else None,
+                    "posted_date": j.posted_date.isoformat() if j.posted_date else None,
                 }
                 for j in jobs
             ]
@@ -390,24 +437,12 @@ async def get_scraper_status():
             "icon": "🎯"
         },
         {
-            "name": "LinkedIn",
-            "enabled": settings.scrapers.linkedin.enabled,
-            "configured": bool(settings.linkedin_li_at),
-            "icon": "💼",
-            "note": "Requires LINKEDIN_LI_AT cookie" if not settings.linkedin_li_at else None
-        },
-        {
             "name": "Jobright",
             "enabled": True,
             "configured": True,
             "icon": "🚀"
         },
-        {
-            "name": "Dice",
-            "enabled": True,
-            "configured": True,
-            "icon": "🎲"
-        },
+
         {
             "name": "WeWorkRemotely",
             "enabled": True,
@@ -471,6 +506,25 @@ async def trigger_scrape(request: ScrapeRequest, background_tasks: BackgroundTas
     background_tasks.add_task(run_scrape_wrapper)
     return {"status": "started", "message": "Scraping started"}
 
+
+@app.get("/api/activity")
+async def get_activity_log(lines: int = 50):
+    print(f"accessing activity log path: {Path(__file__).parent.parent.parent / 'logs' / 'activity.log'}")
+    """Get recent activity logs"""
+    log_path = Path(__file__).parent.parent.parent / "logs" / "activity.log"
+    
+    if not log_path.exists():
+        return {"logs": []}
+        
+    try:
+        # Simple tail implementation
+        with open(log_path, "r") as f:
+            all_lines = f.readlines()
+            # Filter empty lines
+            all_lines = [l.strip() for l in all_lines if l.strip()]
+            return {"logs": all_lines[-lines:]}
+    except Exception as e:
+        return {"logs": [f"Error reading log: {str(e)}"]}
 
 @app.get("/api/llm-usage")
 async def get_llm_usage():
@@ -536,7 +590,6 @@ async def get_profile():
             "last_name": personal.get("last_name", ""),
             "full_name": personal.get("full_name", "Agent"),
             "email": personal.get("email", ""),
-            "linkedin": personal.get("linkedin", ""),
             "github": personal.get("github", ""),
             "avatar": None,
             "valorant_agent": valorant_agent,  # From SQLite
@@ -708,11 +761,75 @@ async def trigger_apply(job_id: str, background_tasks: BackgroundTasks):
     
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+        
+    async def run_single_apply():
+        from src.orchestrator import Orchestrator
+        from src.core.applicant import Applicant
+        from src.core.application import Application
+        
+        # Load profile
+        # Since we run from backend/ directory, data/ is in parent
+        root_dir = Path(__file__).parent.parent.parent.parent
+        profile_path = root_dir / "data" / "profile.json"
+        
+        # Fallback for dev environment path differences
+        if not profile_path.exists():
+             # Try just "data/profile.json" in case CWD is root
+             profile_path = Path("data/profile.json")
+
+        if not profile_path.exists():
+            print(f"Profile not found at {profile_path} or data/profile.json")
+            return
+            
+        applicant = Applicant.from_file(profile_path)
+        orchestrator = Orchestrator(applicant)
+        await orchestrator.setup()
+        
+        try:
+             # Initial update
+             db.update_job_status(job_id, JobStatus.IN_PROGRESS)
+             
+             application = Application.from_job(job)
+             
+             # Determine filler
+             filler_class = orchestrator.fillers.get(job.application_type)
+             if not filler_class:
+                 from src.fillers.universal_filler import UniversalFiller
+                 filler_class = UniversalFiller
+             
+             success = await orchestrator._fill_application(job, application, filler_class)
+             
+             if success:
+                 db.update_job_status(job_id, JobStatus.APPLIED)
+             else:
+                 # If it failed but wasn't marked rejected, mark failed
+                 if job.status != JobStatus.REJECTED.value:
+                     db.update_job_status(job_id, JobStatus.FAILED)
+                     
+        except Exception as e:
+            print(f"Single apply error: {e}")
+            db.update_job_status(job_id, JobStatus.FAILED)
+        finally:
+            await orchestrator.teardown()
+
+    background_tasks.add_task(run_single_apply)
+    return {"status": "started", "job_id": job_id, "message": "Application process started"}
+
+
+@app.post("/api/run")
+async def trigger_auto_apply_run(background_tasks: BackgroundTasks):
+    """Trigger the main auto-apply loop"""
     
-    # For now, just mark as in_progress - actual automation would be triggered separately
-    db.update_job_status(job_id, JobStatus.IN_PROGRESS)
-    
-    return {"status": "started", "job_id": job_id, "message": "Application started"}
+    async def run_wrapper():
+        from src.orchestrator import run_auto_apply
+        try:
+            # Run with default settings (5 applications per run)
+            await run_auto_apply(max_applications=5, scrape_first=False)
+        except Exception as e:
+            print(f"Auto-run error: {e}")
+            
+    background_tasks.add_task(run_wrapper)
+    return {"status": "started", "message": "Auto-apply sequence initiated"}
 
 
 
