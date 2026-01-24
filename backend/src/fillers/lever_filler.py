@@ -134,7 +134,7 @@ class LeverFiller(BaseFiller):
     
     async def _handle_dropdown(self, field, question: str, job: Job) -> None:
         options = await field.locator("option").all_text_contents()
-        best = self.field_mapper.get_dropdown_value(options, question)
+        best = await self.field_mapper.get_dropdown_value(options, question)
         if best:
             await field.select_option(label=best)
     
@@ -170,7 +170,7 @@ class LeverFiller(BaseFiller):
         self.add_question_for_review(question, "Radio question needs review")
     
     async def _handle_input(self, field, question: str, job: Job) -> None:
-        value = self.field_mapper.get_value(question)
+        value = await self.field_mapper.get_value(question)
         if value:
             await field.fill(str(value))
             return

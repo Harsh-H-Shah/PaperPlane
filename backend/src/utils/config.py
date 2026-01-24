@@ -50,7 +50,6 @@ class ScraperSourceConfig(BaseModel):
 
 
 class ScrapersConfig(BaseModel):
-    linkedin: ScraperSourceConfig = Field(default_factory=ScraperSourceConfig)
     jobright: ScraperSourceConfig = Field(default_factory=ScraperSourceConfig)
     simplify: ScraperSourceConfig = Field(default_factory=ScraperSourceConfig)
     cvrve: ScraperSourceConfig = Field(default_factory=ScraperSourceConfig)
@@ -59,7 +58,7 @@ class ScrapersConfig(BaseModel):
 
 class LLMConfig(BaseModel):
     provider: str = "gemini"
-    model: str = "gemini-pro"
+    model: str = "gemini-2.0-flash"
     temperature: float = 0.7
     max_tokens: int = 500
     max_retries: int = 3
@@ -88,7 +87,7 @@ class NotificationsConfig(BaseModel):
 
 
 class DatabaseConfig(BaseModel):
-    path: str = "data/applications.db"
+    path: str = str(Path(__file__).parents[3] / "data" / "applications.db")
     echo: bool = False
 
 
@@ -110,8 +109,6 @@ class Settings(BaseSettings):
     smtp_user: str = Field(default="", alias="SMTP_USER")
     smtp_password: str = Field(default="", alias="SMTP_PASSWORD")
     notification_email: str = Field(default="", alias="NOTIFICATION_EMAIL")
-    linkedin_li_at: str = Field(default="", alias="LINKEDIN_LI_AT")
-    linkedin_jsessionid: str = Field(default="", alias="LINKEDIN_JSESSIONID")
     
     # Email Automation
     email_user: str = Field(default="", alias="EMAIL_USER")
@@ -138,7 +135,15 @@ class Settings(BaseSettings):
     @classmethod
     def load(cls, config_path: Optional[str | Path] = None) -> "Settings":
         if config_path is None:
+            # Try root config, then parent dirs (up to 3 levels)
             config_path = Path("config/settings.yaml")
+            current = Path.cwd()
+            for _ in range(3):
+                candidate = current / "config/settings.yaml"
+                if candidate.exists():
+                    config_path = candidate
+                    break
+                current = current.parent
         else:
             config_path = Path(config_path)
         
@@ -146,7 +151,7 @@ class Settings(BaseSettings):
         if config_path.exists():
             with open(config_path, 'r') as f:
                 yaml_config = yaml.safe_load(f) or {}
-        
+                
         return cls(**yaml_config)
     
     def get_profile_path(self) -> Path:

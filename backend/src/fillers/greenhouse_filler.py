@@ -119,8 +119,14 @@ class GreenhouseFiller(BaseFiller):
                     return True
                 except:
                     # Check for success text
-                    content = await page.content()
-                    if "thank you" in content.lower() or "received" in content.lower():
+                    content = await page.content().lower()
+                    success_patterns = [
+                        "thank you for applying",
+                        "application was received",
+                        "application has been received",
+                        "successfully submitted"
+                    ]
+                    if any(p in content for p in success_patterns):
                         await page.screenshot(path="debug_submit_success.png")
                         return True
                     # Check for "Verify your email" step (Greenhouse specific)
@@ -231,13 +237,25 @@ class GreenhouseFiller(BaseFiller):
                             try:
                                 count = await elements.count()
                                 for i in range(count):
-                                    text = await elements.nth(i).text_content()
+                                    el = elements.nth(i)
+                                    text = await el.text_content()
                                     if text and text.strip():
-                                         found_errors.append(f"[{sel}]: {text.strip()}")
+                                         # Try to find associated label
+                                         label_text = await el.evaluate("el => { const field = el.closest('.field') || el.closest('.custom-question'); return field ? field.querySelector('label')?.innerText : null; }")
+                                         if label_text:
+                                             found_errors.append(f"[{label_text.strip()}]: {text.strip()}")
+                                         else:
+                                             found_errors.append(f"[{sel}]: {text.strip()}")
                             except: pass
                         
                          if found_errors:
                             print(f"   ❌ CAPTURED VALIDATION ERRORS: {found_errors}")
+                            try:
+                                content = await page.content()
+                                with open("greenhouse_validation_dump.html", "w") as f:
+                                    f.write(content)
+                                print("   📄 Saved greenhouse_validation_dump.html")
+                            except: pass
                          else:
                             print("   ❌ No specific error text found (Might be Top-Level Alert or Captcha).")
 
@@ -339,7 +357,7 @@ class GreenhouseFiller(BaseFiller):
             text_lower = question_text.lower()
             
             if any(skip in text_lower for skip in ["first name", "last name", "email", "phone", "resume", "attach", "enter manually", "apply with", "cloudflares candidate privacy policy", "legal name", "would you like to include"]):
-                print("DEBUG: Skipping basic field or noise")
+                print(f"DEBUG: Skipping '{question_text}' (matched skip list)")
                 continue
             
             # Check for Location/City/School/Degree Autocomplete (Prioritize this over Dropdown)
@@ -393,11 +411,34 @@ class GreenhouseFiller(BaseFiller):
             
             await self._handle_input(input_field, question_text, job)
             continue # We handled it via _handle_input, skip existing logic below
+
+        # Final sweep for Disability if missed
+        try:
+            print("DEBUG: Performing final sweep for Disability field...")
+            # Check for standard select or React Select input
+            disability_el = page.locator("select[id*='disability'], select[name*='disability'], #disability_status, [aria-labelledby*='disability_status-label']").first
+            
+            if await disability_el.count() > 0 and await disability_el.is_visible():
+                 val = await disability_el.input_value()
+                 # React Selects often have empty value but show placeholder
+                 # checks value attrib or check if placeholder is visible?
+                 # Actually, usually input value is empty until typed, but for dropdowns...
+                 # We can just try to fill it regardless?
+                 print(f"   -> Found Disability element (ID: {await disability_el.get_attribute('id')}), attempting fill...")
+                 await self._handle_dropdown(disability_el, "Disability Status")
+        except Exception as e:
+            print(f"DEBUG: Disability sweep error: {e}")
+            try:
+                content = await page.content()
+                with open("greenhouse_page_dump.html", "w") as f:
+                    f.write(content)
+                print("   📄 Saved greenhouse_page_dump.html for inspection")
+            except: pass
                 
     async def _handle_autocomplete(self, field, question: str) -> bool:
         import asyncio
         # 1. Determine value
-        value = self.field_mapper.get_value(question)
+        value = await self.field_mapper.get_value(question)
         if not value: return False
         
         print(f"DEBUG: Handling Autocomplete for '{question}' with '{value}'")
@@ -500,7 +541,7 @@ class GreenhouseFiller(BaseFiller):
         # If standard select
         if tag == "select":
             options = await field.locator("option").all_text_contents()
-            best_option = self.field_mapper.get_dropdown_value(options, question)
+            best_option = await self.field_mapper.get_dropdown_value(options, question)
             if best_option:
                 try:
                     await field.select_option(label=best_option)
@@ -541,9 +582,9 @@ class GreenhouseFiller(BaseFiller):
                     return
 
                 # 3. Select best option
-                best_option = self.field_mapper.get_dropdown_value(all_options, question)
+                best_option = await self.field_mapper.get_dropdown_value(all_options, question)
                 if best_option:
-                    print(f"   -> LLM Chose: {best_option}")
+                    print(f"   -> LLM Chose: {best_option} for '{question}'")
                     # Click the specific option
                     # We need to find the element that matches the text
                     # Using text= exact match if possible, or contains
@@ -576,7 +617,7 @@ class GreenhouseFiller(BaseFiller):
         self.add_question_for_review(question_text=question, reason="Long-answer question needs human review")
     
     async def _handle_input(self, field, question: str, job: Job) -> None:
-        value = self.field_mapper.get_value(question)
+        value = await self.field_mapper.get_value(question)
         if not value: return
         
         try:

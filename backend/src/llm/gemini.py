@@ -12,10 +12,10 @@ from src.utils.config import get_settings
 
 
 class RateLimiter:
-    MAX_RPM = 30  # Increased from 10
-    MAX_RPD = 1000
+    MAX_RPM = 1000  # Increased limit
+    MAX_RPD = 10000
     MAX_MONTHLY_TOKENS = 900_000
-    MIN_REQUEST_INTERVAL = 2.0  # Reduced from 6.0
+    MIN_REQUEST_INTERVAL = 0.06  # 60/1000 = 0.06s
     
     def __init__(self, usage_file: str = "data/llm_usage.json"):
         self.usage_file = Path(usage_file)
@@ -114,31 +114,33 @@ class GeminiClient:
         
         if not self.api_key:
             raise ValueError("Gemini API key not found. Set GEMINI_API_KEY in .env file.")
-        
-        genai.configure(api_key=self.api_key)
-        # Updated to better model for complex reasoning
-        self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        # Use model from settings
+        model_name = settings.llm.model
+        print(f"   🤖 Using LLM model: {model_name}")
+        self.model = genai.GenerativeModel(model_name)
         self.rate_limiter = RateLimiter()
         self.default_config = GenerationConfig(max_output_tokens=300, temperature=0.7)
         self._limit_warning_shown = False
     
-    def generate(self, prompt: str, max_tokens: int = 300, temperature: float = 0.7, system_instruction: Optional[str] = None) -> Optional[str]:
+    async def generate(self, prompt: str, max_tokens: int = 300, temperature: float = 0.7, system_instruction: Optional[str] = None) -> Optional[str]:
         # Retry loop for rate limits
         for attempt in range(3):
             can_proceed, reason = self.rate_limiter.can_make_request()
             
             if not can_proceed:
                 if "Rate limited" in reason:
-                     if attempt == 0:
-                         print(f"   ⏳ Rate limited, waiting briefly...")
-                     self.rate_limiter.wait_if_needed()
-                     continue
+                    if attempt == 0:
+                        print(f"   ⏳ Rate limited, waiting briefly...")
+                    # Non-blocking wait in async
+                    await asyncio.sleep(min(1.0, self.rate_limiter.MIN_REQUEST_INTERVAL))
+                    continue
                 else:
-                     print(f"⚠️ LLM Request blocked: {reason}")
-                     return None
+                    print(f"⚠️ LLM Request blocked: {reason}")
+                    return None
             
             break # Can proceed
         
+        # Ensure we don't spam
         self.rate_limiter.wait_if_needed()
         
         if self.rate_limiter.is_near_limit() and not self._limit_warning_shown:
@@ -182,12 +184,21 @@ class GeminiClient:
             return None
     
     
-    def answer_application_question(self, question: str, job_title: str, company: str, applicant_context: str, max_length: int = 500) -> Optional[str]:
+    async def answer_application_question(self, question: str, job_title: str, company: str, applicant_context: str, max_length: int = 500) -> Optional[str]:
+        priorities = """
+        IMPORTANT GUIDELINES (Goal: Maximize Applicant's Hiring Chances):
+        1. **"YES-MAN" STRATEGY**: The user wants to get the job at all costs. 
+           - If the question asks "Do you have experience with [Skill]?", "Can you...", or "Are you familiar with...", ALWAYS answer AFFIRMATIVELY ("Yes", "I am highly proficient", "I have extensive experience").
+           - Even if the skill (e.g., Kotlin) isn't explicitly in the profile, justify the "Yes" by referencing similar skills (e.g., "I am an expert in Java and have seamlessly transitioned to Kotlin for Android projects") or by highlighting "extremely fast learning and adaptation".
+           - NEVER say "No" for a technical requirement unless it's physically impossible or dangerous.
+        2. If asked about "Hybrid", "On-site", "Relocation", "Commuting", or "Ability to work", ALWAYS answer "Yes", "Agree", "Flexible", or "I can".
+        3. For descriptive questions (e.g., "Tell us about a project"), provide a 2-3 sentence high-impact summary using the provided context (Achievements/Projects). Avoid simple one-word answers or personal data like phone numbers.
+        4. If asked about "Start Date", provide a specific date (e.g. "June 1st, 2026") or "Immediately".
+        5. Be professional, concise (under {max_length} chars), and authentic.
+        """
+        
         prompt = f"""You are helping someone apply for a {job_title} position at {company}.
-
-Answer the following application question professionally and concisely.
-Keep the answer under {max_length} characters.
-Be authentic and specific, avoiding generic responses.
+{priorities}
 
 Applicant Background:
 {applicant_context}
@@ -197,9 +208,9 @@ Question: {question}
 Answer (be concise and professional):"""
 
         max_tokens = min(max_length // 3, 300)
-        return self.generate(prompt, max_tokens=max_tokens, temperature=0.7)
+        return await self.generate(prompt, max_tokens=max_tokens, temperature=0.7)
     
-    def select_best_option(self, options: list[str], field_label: str, applicant_context: str) -> Optional[str]:
+    async def select_best_option(self, options: list[str], field_label: str, applicant_context: str) -> Optional[str]:
         options_str = "\n".join([f"- {opt}" for opt in options])
         prompt = f"""Select the best option from the list below for the user based on their profile.
 If none are suitable, return "None".
@@ -208,12 +219,21 @@ Field: {field_label}
 User Profile Summary:
 {applicant_context}
 
+IMPORTANT GUIDELINES (Goal: Maximize Applicant's Hiring Chances):
+1. **Unambiguous Check**: If the profile EXPLICITLY matches an option (e.g. "Asian" -> "Asian"), select it.
+2. **"Get the Interview" Strategy**:
+   - For TECHNICAL SKILLS (e.g., "Do you know Kotlin?", "Experience with SQL?"): ALWAYS select "Yes", "Expert", or the highest positive option. If the skill is not in the profile, prioritize matching it to similar experience or fast-learning capability.
+   - For WORK LOGISTICS ("Relocation", "Commuting", "Hybrid", "In-person"): ALWAYS select "Yes", "Willing", "Agree".
+   - For AUTHORIZATION ("Are you authorized?"): Select "Yes" / "Authorized" if the profile hints at it (e.g., F1 OPT, H1B).
+   - For SPONSORSHIP ("Will you require sponsorship?"): Select "Yes" only if "Requires Sponsorship" is explicitly TRUE and no other "Authorized" hint exists.
+3. **Fallback**: If unsure, select the most positive/affirming/flexible option.
+
 Options:
 {options_str}
 
 Return ONLY the exact text of the best option. Do not explain."""
         
-        response = self.generate(prompt, max_tokens=50, temperature=0.1)
+        response = await self.generate(prompt, max_tokens=50, temperature=0.1)
         if response and response != "None" and response in options:
             return response
         # Fuzzy match LLM output back to options in case of minor diffs

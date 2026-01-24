@@ -1,4 +1,5 @@
 import re
+import asyncio
 from typing import Optional, Any
 from src.core.applicant import Applicant
 
@@ -62,7 +63,12 @@ class FieldMapper:
     }
     
     BOOLEAN_PATTERNS = {
-        "yes": [r"authorized.*work", r"legally.*work", r"eligible.*work", r"18.*years", r"over.*18"],
+        "yes": [
+            r"authorized.*work", r"legally.*work", r"eligible.*work", 
+            r"18.*years", r"over.*18",
+            r"willing", r"able", r"can you", r"start.*date", r"commute", r"relocate",
+            r"open.*to", r"familiar.*with"
+        ],
         "no": [r"require.*sponsorship", r"need.*sponsorship", r"visa.*sponsorship"],
     }
     
@@ -71,7 +77,7 @@ class FieldMapper:
         self.llm_client = llm_client
         self._cache = {}
     
-    def get_value(self, field_label: str) -> Optional[Any]:
+    async def get_value(self, field_label: str) -> Optional[Any]:
         normalized = self._normalize(field_label)
         
         if normalized in self._cache:
@@ -93,14 +99,7 @@ class FieldMapper:
         if self.llm_client:
             print(f"   🤖 Invoking LLM for field: '{field_label}'...")
             context = self._get_applicant_context()
-            prompt = f"""Field Label: "{field_label}"
-User Profile:
-{context}
-
-What is the single best value for this field for this user?
-Return ONLY the value. If not found/applicable, return "None"."""
             
-            # Use generate directly
             # STRATEGY: maximizing acceptance chances.
             prompt = f"""Field Label: "{field_label}"
 User Profile:
@@ -115,11 +114,22 @@ Goal: Select the option (or provide the text) that MAXIMIZES the user's chance o
 What is the single best value for this field for this user?
 Return ONLY the value. If not found/applicable, return "None"."""
             
-            response = self.llm_client.generate(prompt, max_tokens=50, temperature=0.1)
-            if response and "None" not in response and len(response) < 100:
-                 print(f"      -> LLM suggested: {response}")
-                 self._cache[normalized] = response
-                 return response
+            for attempt in range(2):
+                response = await self.llm_client.generate(prompt, max_tokens=50, temperature=0.1)
+                
+                if response:
+                    if "None" not in response and len(response) < 100:
+                         print(f"      -> LLM suggested: {response}")
+                         self._cache[normalized] = response
+                         return response
+                    break # returned None/valid response, don't retry same non-error result
+                
+                # If response is None (rate limit), retry
+                if attempt < 1:
+                     print(f"     ⏳ LLM empty response (Attempt {attempt+1}/2), waiting briefly...")
+                     await asyncio.sleep(1)
+        
+        return None
         
         return None
     
@@ -127,6 +137,9 @@ Return ONLY the value. If not found/applicable, return "None"."""
         # Helper to build a summary for LLM
         edu_str = "\n".join([f"- {e.degree} in {e.field} from {e.institution} ({e.start_date} to {e.end_date})" for e in self.applicant.education])
         exp_str = "\n".join([f"- {e.title} at {e.company} ({e.start_date} to {e.end_date})" for e in self.applicant.experience])
+        
+        achievements_str = "\n".join([f"- {a.name} ({a.year}): {a.description}" for a in self.applicant.achievements])
+        projects_str = "\n".join([f"- {p.name} ({p.date_range}): {p.highlights[0]}" for p in self.applicant.projects[:3]])
         
         return f"""
 Name: {self.applicant.full_name}
@@ -142,6 +155,12 @@ Education History:
 
 Experience History:
 {exp_str}
+
+Projects:
+{projects_str}
+
+Achievements:
+{achievements_str}
 
 Skills: {self.applicant.get_skills_string(30)}
 """
@@ -159,8 +178,23 @@ Skills: {self.applicant.get_skills_string(30)}
         return None
     
     def _try_fuzzy_mapping(self, label: str) -> Optional[Any]:
+        # Avoid mapping long questions or irrelevant context to personal data
+        # Especially "mobile" for "mobile app / mobile role"
+        label_lower = label.lower()
+        is_long_question = len(label_lower) > 30
+        
         for key, paths in self.FIELD_MAPPINGS.items():
-            if key in label or label in key:
+            if key in label_lower:
+                # SPECIAL CASE: "mobile" usually means phone, but not in "mobile app" or "mobile role"
+                if key == "mobile":
+                    if any(x in label_lower for x in ["app", "role", "feature", "experience", "role", "position", "project", "contribut"]):
+                        continue
+                
+                # SPECIAL CASE: Don't map personal data (like name/phone) to long questions via fuzzy match
+                # Questions like "Tell us about your proudest achievement..." shouldn't be filled with "Harsh"
+                if is_long_question and key in ["name", "first name", "last name", "phone", "mobile", "cell", "email"]:
+                    continue
+
                 value = self._get_from_path(paths)
                 if value:
                     return value
@@ -204,7 +238,7 @@ Skills: {self.applicant.get_skills_string(30)}
         
         return None
     
-    def get_dropdown_value(self, options: list[str], field_label: str) -> Optional[str]:
+    async def get_dropdown_value(self, options: list[str], field_label: str) -> Optional[str]:
         label_lower = field_label.lower()
         
         # 1. Try Heuristics
@@ -222,6 +256,24 @@ Skills: {self.applicant.get_skills_string(30)}
             target = self.applicant.demographics.gender
             match = self._best_match(options, target)
             if match: return match
+
+        if "disability" in label_lower:
+            target = self.applicant.demographics.disability_status.lower()
+            if "not " in target or "no " in target:
+                 # Prefer full "No, I do not have a disability" over just "No" often
+                 for opt in options:
+                     if "no, i do not" in opt.lower():
+                         return opt
+                 for opt in options:
+                     if opt.lower().strip() == "no":
+                         return opt
+            elif "yes" in target:
+                 for opt in options:
+                     if "yes, i have" in opt.lower():
+                         return opt
+                 for opt in options:
+                     if opt.lower().strip() == "yes":
+                         return opt
         
         if "experience" in label_lower and "year" in label_lower:
             years = self.applicant.years_of_experience
@@ -233,7 +285,7 @@ Skills: {self.applicant.get_skills_string(30)}
         if self.llm_client:
             print(f"   🤖 Invoking LLM for dropdown: '{field_label}' with {len(options)} options. Sample: {options[:5]}...")
             context = self._get_applicant_context()
-            val = self.llm_client.select_best_option(options, field_label, context)
+            val = await self.llm_client.select_best_option(options, field_label, context)
             if val:
                  print(f"      -> LLM selected: {val}")
             return val

@@ -19,6 +19,7 @@ class BaseFiller(ABC):
         self.llm_client = llm_client
         self.field_mapper = FieldMapper(applicant, llm_client)
         self.context_builder = ContextBuilder(applicant)
+        self.validator = AnswerValidator()
         self.questions_for_review: list[ApplicationQuestion] = []
     
     @abstractmethod
@@ -107,7 +108,7 @@ class BaseFiller(ABC):
         if not label:
             return False
         
-        value = self.field_mapper.get_value(label)
+        value = await self.field_mapper.get_value(label)
         if value:
             return await self.fill_text_field(page, field_selector, str(value))
         
@@ -123,7 +124,7 @@ class BaseFiller(ABC):
         
         context = self.context_builder.build_full_context(job, max_chars=800)
         
-        answer = self.llm_client.answer_application_question(
+        answer = await self.llm_client.answer_application_question(
             question=question,
             job_title=job.title,
             company=job.company,
