@@ -1,0 +1,657 @@
+{% extends "base.html" %}
+{% block title %}Cold Emails - AutoApplier{% endblock %}
+
+{% block content %}
+<div class="emails-container">
+    <!-- Header -->
+    <div class="page-header">
+        <h1>📧 Cold Email Outreach</h1>
+        <div class="header-actions">
+            <button id="processBtn" class="btn btn-secondary">
+                <span class="icon">⚡</span> Process Queue
+            </button>
+            <button id="refreshBtn" class="btn btn-primary">
+                <span class="icon">🔄</span> Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row" id="statsRow">
+        <div class="stat-card">
+            <div class="stat-value" id="totalEmails">0</div>
+            <div class="stat-label">Total Emails</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="sentEmails">0</div>
+            <div class="stat-label">Sent</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="scheduledEmails">0</div>
+            <div class="stat-label">Scheduled</div>
+        </div>
+        <div class="stat-card success">
+            <div class="stat-value" id="openRate">0%</div>
+            <div class="stat-label">Open Rate</div>
+        </div>
+        <div class="stat-card success">
+            <div class="stat-value" id="replyRate">0%</div>
+            <div class="stat-label">Reply Rate</div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" data-tab="emails">Emails</button>
+        <button class="tab" data-tab="contacts">Contacts</button>
+        <button class="tab" data-tab="templates">Templates</button>
+    </div>
+
+    <!-- Emails Tab -->
+    <div class="tab-content active" id="emails-tab">
+        <div class="section-header">
+            <h2>Email Queue</h2>
+            <select id="statusFilter" class="filter-select">
+                <option value="">All Status</option>
+                <option value="draft">Draft</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="sent">Sent</option>
+                <option value="opened">Opened</option>
+                <option value="replied">Replied</option>
+            </select>
+        </div>
+        <div class="emails-list" id="emailsList">
+            <div class="loading">Loading emails...</div>
+        </div>
+    </div>
+
+    <!-- Contacts Tab -->
+    <div class="tab-content" id="contacts-tab">
+        <div class="section-header">
+            <h2>Contacts</h2>
+            <div class="header-actions">
+                <input type="text" id="companyFilter" placeholder="Filter by company..." class="filter-input">
+                <button id="scrapeContactsBtn" class="btn btn-secondary">
+                    <span class="icon">🔍</span> Scrape Contacts
+                </button>
+            </div>
+        </div>
+        <div class="contacts-list" id="contactsList">
+            <div class="loading">Loading contacts...</div>
+        </div>
+    </div>
+
+    <!-- Templates Tab -->
+    <div class="tab-content" id="templates-tab">
+        <div class="section-header">
+            <h2>Email Templates</h2>
+        </div>
+        <div class="templates-list" id="templatesList">
+            <div class="loading">Loading templates...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Scrape Modal -->
+<div id="scrapeModal" class="modal">
+    <div class="modal-content">
+        <h3>Scrape Contacts from Apollo</h3>
+        <input type="text" id="scrapeCompany" placeholder="Company name..." class="modal-input">
+        <input type="number" id="scrapeLimit" value="10" min="1" max="50" class="modal-input">
+        <div class="modal-actions">
+            <button id="cancelScrape" class="btn btn-secondary">Cancel</button>
+            <button id="confirmScrape" class="btn btn-primary">Scrape</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.emails-container {
+    padding: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.page-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+/* Stats Row */
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+}
+
+.stat-card.success {
+    border-color: rgba(16, 185, 129, 0.3);
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: white;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-top: 4px;
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 16px;
+}
+
+.tab {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 16px;
+    font-weight: 600;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.tab:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+}
+
+.tab.active {
+    background: rgba(102, 126, 234, 0.2);
+    color: #667eea;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Section Header */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.section-header h2 {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.filter-select, .filter-input {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.filter-input {
+    width: 200px;
+}
+
+/* Lists */
+.emails-list, .contacts-list, .templates-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.email-card, .contact-card, .template-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.email-card:hover, .contact-card:hover, .template-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.card-info {
+    flex: 1;
+}
+
+.card-title {
+    font-weight: 600;
+    font-size: 16px;
+    margin-bottom: 4px;
+}
+
+.card-subtitle {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.card-meta {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.4);
+    margin-top: 8px;
+}
+
+.card-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* Status Badge */
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-draft { background: rgba(156, 163, 175, 0.2); color: #9ca3af; }
+.status-scheduled { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+.status-sent { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+.status-opened { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.status-replied { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
+.status-failed { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+/* Persona Badge */
+.persona-badge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.persona-recruiter { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+.persona-hiring_manager { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
+.persona-engineering_manager { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: #1a1a2e;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 24px;
+    width: 400px;
+}
+
+.modal-content h3 {
+    margin-bottom: 16px;
+}
+
+.modal-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.empty-state .icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+@media (max-width: 768px) {
+    .stats-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .section-header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load initial data
+    loadStats();
+    loadEmails();
+    loadContacts();
+    loadTemplates();
+    
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            this.classList.add('active');
+            document.getElementById(this.dataset.tab + '-tab').classList.add('active');
+        });
+    });
+    
+    // Refresh button
+    document.getElementById('refreshBtn').addEventListener('click', function() {
+        loadStats();
+        loadEmails();
+        loadContacts();
+    });
+    
+    // Process queue button
+    document.getElementById('processBtn').addEventListener('click', async function() {
+        this.disabled = true;
+        this.textContent = 'Processing...';
+        
+        await fetch('/api/emails/process', { method: 'POST' });
+        
+        setTimeout(() => {
+            this.disabled = false;
+            this.innerHTML = '<span class="icon">⚡</span> Process Queue';
+            loadStats();
+            loadEmails();
+        }, 2000);
+    });
+    
+    // Status filter
+    document.getElementById('statusFilter').addEventListener('change', loadEmails);
+    
+    // Scrape modal
+    document.getElementById('scrapeContactsBtn').addEventListener('click', function() {
+        document.getElementById('scrapeModal').classList.add('active');
+    });
+    
+    document.getElementById('cancelScrape').addEventListener('click', function() {
+        document.getElementById('scrapeModal').classList.remove('active');
+    });
+    
+    document.getElementById('confirmScrape').addEventListener('click', async function() {
+        const company = document.getElementById('scrapeCompany').value;
+        const limit = document.getElementById('scrapeLimit').value;
+        
+        if (!company) {
+            alert('Please enter a company name');
+            return;
+        }
+        
+        await fetch(`/api/contacts/scrape?company=${encodeURIComponent(company)}&limit=${limit}`, {
+            method: 'POST'
+        });
+        
+        document.getElementById('scrapeModal').classList.remove('active');
+        document.getElementById('scrapeCompany').value = '';
+        
+        setTimeout(() => loadContacts(), 3000);
+    });
+});
+
+async function loadStats() {
+    try {
+        const response = await fetch('/api/email-stats');
+        const stats = await response.json();
+        
+        document.getElementById('totalEmails').textContent = stats.total_emails || 0;
+        document.getElementById('sentEmails').textContent = stats.sent || 0;
+        document.getElementById('scheduledEmails').textContent = stats.scheduled || 0;
+        document.getElementById('openRate').textContent = (stats.open_rate || 0) + '%';
+        document.getElementById('replyRate').textContent = (stats.reply_rate || 0) + '%';
+    } catch (e) {
+        console.error('Failed to load stats:', e);
+    }
+}
+
+async function loadEmails() {
+    const status = document.getElementById('statusFilter').value;
+    const url = status ? `/api/emails?status=${status}` : '/api/emails';
+    
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        const list = document.getElementById('emailsList');
+        
+        if (!data.emails || data.emails.length === 0) {
+            list.innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">📭</div>
+                    <p>No emails yet. Create a campaign to get started!</p>
+                </div>
+            `;
+            return;
+        }
+        
+        list.innerHTML = data.emails.map(email => `
+            <div class="email-card">
+                <div class="card-info">
+                    <div class="card-title">${escapeHtml(email.subject)}</div>
+                    <div class="card-subtitle">${escapeHtml(email.body)}</div>
+                    <div class="card-meta">
+                        ${email.scheduled_at ? 'Scheduled: ' + new Date(email.scheduled_at).toLocaleString() : ''}
+                        ${email.sent_at ? 'Sent: ' + new Date(email.sent_at).toLocaleString() : ''}
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <span class="status-badge status-${email.status}">${email.status}</span>
+                    ${email.status === 'draft' ? `
+                        <button class="btn btn-small btn-secondary" onclick="scheduleEmail('${email.id}')">Schedule</button>
+                        <button class="btn btn-small btn-primary" onclick="sendEmail('${email.id}')">Send Now</button>
+                    ` : ''}
+                </div>
+            </div>
+        `).join('');
+        
+    } catch (e) {
+        console.error('Failed to load emails:', e);
+    }
+}
+
+async function loadContacts() {
+    try {
+        const response = await fetch('/api/contacts');
+        const data = await response.json();
+        
+        const list = document.getElementById('contactsList');
+        
+        if (!data.contacts || data.contacts.length === 0) {
+            list.innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">👤</div>
+                    <p>No contacts yet. Use Apollo scraper to find contacts!</p>
+                </div>
+            `;
+            return;
+        }
+        
+        list.innerHTML = data.contacts.map(contact => `
+            <div class="contact-card">
+                <div class="card-info">
+                    <div class="card-title">${escapeHtml(contact.name)}</div>
+                    <div class="card-subtitle">${escapeHtml(contact.title)} at ${escapeHtml(contact.company)}</div>
+                    <div class="card-meta">${escapeHtml(contact.email)}</div>
+                </div>
+                <div class="card-actions">
+                    <span class="persona-badge persona-${contact.persona}">${contact.persona}</span>
+                    ${contact.linkedin_url ? `<a href="${contact.linkedin_url}" target="_blank" class="btn btn-small btn-secondary">LinkedIn</a>` : ''}
+                </div>
+            </div>
+        `).join('');
+        
+    } catch (e) {
+        console.error('Failed to load contacts:', e);
+    }
+}
+
+async function loadTemplates() {
+    try {
+        const response = await fetch('/api/templates');
+        const data = await response.json();
+        
+        const list = document.getElementById('templatesList');
+        
+        if (!data.templates || data.templates.length === 0) {
+            list.innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">📝</div>
+                    <p>No templates available.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        list.innerHTML = data.templates.map(template => `
+            <div class="template-card">
+                <div class="card-info">
+                    <div class="card-title">${escapeHtml(template.name)}</div>
+                    <div class="card-subtitle">Subject: ${escapeHtml(template.subject)}</div>
+                    <div class="card-meta">
+                        ${template.persona_type ? 'For: ' + template.persona_type : 'For: All personas'}
+                        ${template.is_followup ? ' • Follow-up Day ' + template.followup_day : ''}
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <button class="btn btn-small btn-secondary" onclick="viewTemplate('${template.id}')">View</button>
+                </div>
+            </div>
+        `).join('');
+        
+    } catch (e) {
+        console.error('Failed to load templates:', e);
+    }
+}
+
+async function sendEmail(emailId) {
+    if (!confirm('Send this email now?')) return;
+    
+    await fetch(`/api/emails/${emailId}/send`, { method: 'POST' });
+    setTimeout(() => {
+        loadStats();
+        loadEmails();
+    }, 1000);
+}
+
+async function scheduleEmail(emailId) {
+    await fetch(`/api/emails/${emailId}/schedule`, { method: 'POST' });
+    loadEmails();
+}
+
+async function viewTemplate(templateId) {
+    const response = await fetch(`/api/templates/${templateId}`);
+    const template = await response.json();
+    alert(`Subject: ${template.subject}\n\n${template.body}`);
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+{% endblock %}

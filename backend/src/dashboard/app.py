@@ -916,6 +916,341 @@ async def trigger_auto_apply_run(background_tasks: BackgroundTasks):
     return {"status": "started", "message": "Auto-apply sequence initiated"}
 
 
+# ============ Cold Email API ============
+
+class ContactCreate(BaseModel):
+    name: str
+    email: str
+    title: Optional[str] = ""
+    company: str
+    linkedin_url: Optional[str] = None
+    persona: Optional[str] = "unknown"
+
+class EmailCreate(BaseModel):
+    contact_id: str
+    job_id: Optional[str] = None
+    template_id: Optional[str] = None
+    subject: str
+    body: str
+
+class CampaignCreate(BaseModel):
+    job_id: str
+    max_contacts: int = 5
+    personas: Optional[list[str]] = None
+
+
+@app.get("/api/contacts")
+async def list_contacts(
+    company: Optional[str] = None,
+    limit: int = 100
+):
+    """Get all contacts, optionally filtered by company"""
+    db = get_db()
+    
+    if company:
+        contacts = db.get_contacts_for_company(company, limit)
+    else:
+        contacts = db.get_all_contacts(limit)
+    
+    return {
+        "total": len(contacts),
+        "contacts": [
+            {
+                "id": c.id,
+                "name": c.name,
+                "email": c.email,
+                "title": c.title,
+                "company": c.company,
+                "linkedin_url": c.linkedin_url,
+                "persona": c.persona.value if hasattr(c.persona, 'value') else c.persona,
+                "source": c.source.value if hasattr(c.source, 'value') else c.source,
+                "created_at": c.created_at.isoformat() if c.created_at else None,
+            }
+            for c in contacts
+        ]
+    }
+
+
+@app.post("/api/contacts")
+async def create_contact(contact_in: ContactCreate):
+    """Add a new contact manually"""
+    from src.core.cold_email_models import Contact, ContactPersona, ContactSource
+    
+    db = get_db()
+    
+    contact = Contact(
+        name=contact_in.name,
+        email=contact_in.email,
+        title=contact_in.title or "",
+        company=contact_in.company,
+        linkedin_url=contact_in.linkedin_url,
+        persona=ContactPersona(contact_in.persona) if contact_in.persona else ContactPersona.UNKNOWN,
+        source=ContactSource.MANUAL,
+    )
+    
+    contact_id = db.add_contact(contact)
+    return {"id": contact_id, "success": True}
+
+
+@app.post("/api/contacts/scrape")
+async def scrape_contacts(company: str, background_tasks: BackgroundTasks, limit: int = 10):
+    """Scrape contacts from Apollo for a company"""
+    
+    async def run_scrape():
+        try:
+            from src.scrapers.apollo_scraper import ApolloScraper
+            
+            scraper = ApolloScraper()
+            contacts = await scraper.search_contacts(company=company, limit=limit)
+            
+            db = get_db()
+            count = db.add_contacts_bulk(contacts)
+            print(f"   ✅ Scraped {count} contacts for {company}")
+        except Exception as e:
+            print(f"   ❌ Contact scrape error: {e}")
+    
+    background_tasks.add_task(run_scrape)
+    return {"status": "started", "message": f"Scraping contacts for {company}"}
+
+
+@app.get("/api/emails")
+async def list_emails(
+    status: Optional[str] = None,
+    limit: int = 100
+):
+    """Get all cold emails"""
+    from src.core.cold_email_models import EmailStatus
+    
+    db = get_db()
+    
+    if status:
+        emails = db.get_cold_emails_by_status(EmailStatus(status), limit)
+    else:
+        emails = db.get_all_cold_emails(limit)
+    
+    return {
+        "total": len(emails),
+        "emails": [
+            {
+                "id": e.id,
+                "contact_id": e.contact_id,
+                "job_id": e.job_id,
+                "subject": e.subject,
+                "body": e.body[:200] + "..." if len(e.body) > 200 else e.body,
+                "status": e.status.value if hasattr(e.status, 'value') else e.status,
+                "scheduled_at": e.scheduled_at.isoformat() if e.scheduled_at else None,
+                "sent_at": e.sent_at.isoformat() if e.sent_at else None,
+                "followup_number": e.followup_number,
+                "created_at": e.created_at.isoformat() if e.created_at else None,
+            }
+            for e in emails
+        ]
+    }
+
+
+@app.post("/api/emails")
+async def create_email(email_in: EmailCreate):
+    """Create a new cold email"""
+    from src.core.cold_email_models import ColdEmail, EmailStatus
+    
+    db = get_db()
+    
+    email = ColdEmail(
+        contact_id=email_in.contact_id,
+        job_id=email_in.job_id,
+        template_id=email_in.template_id,
+        subject=email_in.subject,
+        body=email_in.body,
+        status=EmailStatus.DRAFT,
+    )
+    
+    email_id = db.add_cold_email(email)
+    return {"id": email_id, "success": True}
+
+
+@app.get("/api/emails/{email_id}")
+async def get_email(email_id: str):
+    """Get a specific email"""
+    db = get_db()
+    email = db.get_cold_email(email_id)
+    
+    if not email:
+        raise HTTPException(status_code=404, detail="Email not found")
+    
+    return {
+        "id": email.id,
+        "contact_id": email.contact_id,
+        "job_id": email.job_id,
+        "subject": email.subject,
+        "body": email.body,
+        "status": email.status.value if hasattr(email.status, 'value') else email.status,
+        "scheduled_at": email.scheduled_at.isoformat() if email.scheduled_at else None,
+        "sent_at": email.sent_at.isoformat() if email.sent_at else None,
+        "personalization_data": email.personalization_data,
+    }
+
+
+@app.post("/api/emails/{email_id}/send")
+async def send_email_now(email_id: str, background_tasks: BackgroundTasks):
+    """Send a specific email immediately"""
+    
+    async def run_send():
+        try:
+            from src.email.cold_email_service import get_cold_email_service
+            service = get_cold_email_service()
+            success = await service.send_email_now(email_id)
+            print(f"   {'✅' if success else '❌'} Send email {email_id}: {'success' if success else 'failed'}")
+        except Exception as e:
+            print(f"   ❌ Send error: {e}")
+    
+    background_tasks.add_task(run_send)
+    return {"status": "sending", "email_id": email_id}
+
+
+@app.post("/api/emails/{email_id}/schedule")
+async def schedule_email(email_id: str):
+    """Schedule an email for optimal delivery time"""
+    from src.email.email_scheduler import EmailScheduler
+    from src.core.cold_email_models import EmailStatus
+    
+    db = get_db()
+    email = db.get_cold_email(email_id)
+    
+    if not email:
+        raise HTTPException(status_code=404, detail="Email not found")
+    
+    scheduler = EmailScheduler()
+    scheduled_time = scheduler.schedule_email(email)
+    
+    db.update_cold_email_status(email_id, EmailStatus.SCHEDULED)
+    
+    return {
+        "success": True,
+        "email_id": email_id,
+        "scheduled_at": scheduled_time.isoformat()
+    }
+
+
+@app.get("/api/templates")
+async def list_templates():
+    """Get all email templates"""
+    from src.email.email_templates import TemplateManager
+    
+    manager = TemplateManager()
+    templates = manager.get_all_templates()
+    
+    return {
+        "total": len(templates),
+        "templates": [
+            {
+                "id": t.id,
+                "name": t.name,
+                "subject": t.subject,
+                "persona_type": t.persona_type.value if t.persona_type else None,
+                "is_followup": t.is_followup,
+                "followup_day": t.followup_day,
+            }
+            for t in templates
+        ]
+    }
+
+
+@app.get("/api/templates/{template_id}")
+async def get_template(template_id: str):
+    """Get a specific template with full body"""
+    from src.email.email_templates import TemplateManager
+    
+    manager = TemplateManager()
+    template = manager.get_template(template_id)
+    
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    
+    return {
+        "id": template.id,
+        "name": template.name,
+        "subject": template.subject,
+        "body": template.body,
+        "persona_type": template.persona_type.value if template.persona_type else None,
+        "is_followup": template.is_followup,
+        "followup_day": template.followup_day,
+    }
+
+
+@app.post("/api/campaigns")
+async def create_campaign(campaign_in: CampaignCreate, background_tasks: BackgroundTasks):
+    """Create a cold email campaign for a job"""
+    
+    async def run_campaign():
+        try:
+            from src.email.cold_email_service import get_cold_email_service
+            from src.core.cold_email_models import ContactPersona
+            
+            db = get_db()
+            job = db.get_job(campaign_in.job_id)
+            
+            if not job:
+                print(f"   ❌ Job {campaign_in.job_id} not found")
+                return
+            
+            personas = None
+            if campaign_in.personas:
+                personas = [ContactPersona(p) for p in campaign_in.personas]
+            
+            service = get_cold_email_service()
+            result = await service.create_campaign_for_job(
+                job=job,
+                max_contacts=campaign_in.max_contacts,
+                personas=personas
+            )
+            print(f"   ✅ Campaign created: {result}")
+        except Exception as e:
+            print(f"   ❌ Campaign error: {e}")
+    
+    background_tasks.add_task(run_campaign)
+    return {"status": "started", "job_id": campaign_in.job_id}
+
+
+@app.get("/api/email-stats")
+async def get_email_stats():
+    """Get cold email statistics"""
+    db = get_db()
+    stats = db.get_email_stats()
+    
+    return {
+        "total_emails": stats["total"],
+        "sent": stats["sent"],
+        "opened": stats["opened"],
+        "replied": stats["replied"],
+        "scheduled": stats["scheduled"],
+        "open_rate": round(stats["open_rate"], 1),
+        "reply_rate": round(stats["reply_rate"], 1),
+    }
+
+
+@app.post("/api/emails/process")
+async def process_scheduled_emails(background_tasks: BackgroundTasks):
+    """Process all scheduled emails that are due"""
+    
+    async def run_process():
+        try:
+            from src.email.cold_email_service import get_cold_email_service
+            service = get_cold_email_service()
+            result = await service.process_scheduled()
+            print(f"   ✅ Processed emails: {result}")
+        except Exception as e:
+            print(f"   ❌ Process error: {e}")
+    
+    background_tasks.add_task(run_process)
+    return {"status": "started", "message": "Processing scheduled emails"}
+
+
+# ============ Emails Page ============
+
+@app.get("/emails", response_class=HTMLResponse)
+async def emails_page(request: Request):
+    return templates.TemplateResponse("emails.html", {"request": request, "page": "emails"})
+
 
 def run_dashboard(host: str = "127.0.0.1", port: int = 8080):
     import uvicorn
