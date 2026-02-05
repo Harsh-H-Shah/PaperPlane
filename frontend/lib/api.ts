@@ -188,6 +188,49 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  // Contact API
+  getContacts: (params?: { company?: string; limit?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.company) searchParams.set('company', params.company);
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    return fetchApi<{ total: number; contacts: Contact[] }>(`/api/contacts?${searchParams.toString()}`);
+  },
+
+  createContact: (data: Partial<Contact>) =>
+    fetchApi<{ id: string; success: boolean }>('/api/contacts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  scrapeContacts: (company: string, limit: number = 10) =>
+    fetchApi<{ status: string; message: string }>(`/api/contacts/scrape`, {
+      method: 'POST',
+      query: { company, limit },  // Note: fetchApi doesn't handle query in options normally, we handle it in url
+    } as any).catch(() => {
+        // Fallback for query param handling if custom fetchApi logic differs
+        return fetch(`${API_BASE}/api/contacts/scrape?company=${encodeURIComponent(company)}&limit=${limit}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        }).then(r => r.json());
+    }),
+
+  // Campaign API
+  createCampaign: (data: { job_id: string; max_contacts: number; personas?: string[] }) =>
+    fetchApi<{ status: string; job_id: string }>('/api/campaigns', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    
+  scheduleEmail: (emailId: string) =>
+    fetchApi<{ success: boolean; scheduled_at: string }>(`/api/emails/${emailId}/schedule`, {
+        method: 'POST'
+    }),
+    
+  sendEmailNow: (emailId: string) =>
+    fetchApi<{ status: string; email_id: string }>(`/api/emails/${emailId}/send`, {
+        method: 'POST'
+    }),
+
   // Email API
   getEmails: (params?: { status?: string; limit?: number }) => {
     const searchParams = new URLSearchParams();
@@ -202,6 +245,18 @@ export const api = {
   
   getStatsEmail: () => fetchApi<any>('/api/email-stats'),
 };
+
+export interface Contact {
+  id: string;
+  name: string;
+  email: string;
+  title: string;
+  company: string;
+  linkedin_url?: string;
+  persona: string;
+  source: string;
+  created_at: string;
+}
 
 export interface Email {
   id: string;
