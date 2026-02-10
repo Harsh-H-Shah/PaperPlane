@@ -17,8 +17,7 @@ from sqlalchemy import or_
 from src.utils.database import get_db
 from src.utils.config import get_settings
 from src.core.job import JobStatus, ApplicationType
-
-logger = logging.getLogger(__name__)
+from src.utils.logger import logger
 
 # ============ Admin Auth ============
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "")
@@ -325,7 +324,7 @@ async def create_job(job_in: JobCreate):
     from src.core.job import Job, JobSource
     import uuid
     
-    print(f"DEBUG: Manual job creation request for: {job_in.title} at {job_in.company}")
+    logger.info(f"Manual job creation request for: {job_in.title} at {job_in.company}")
     
     job = Job(
         title=job_in.title,
@@ -340,10 +339,10 @@ async def create_job(job_in: JobCreate):
     try:
         job_id = db.add_job(job)
         job.id = job_id # Sync ID with database 
-        print(f"   ✅ Job created/reset with ID: {job_id}")
+        logger.info(f"   ✅ Job created/reset with ID: {job_id}")
         return {"id": job_id, "success": True, "job": job.model_dump()}
     except Exception as e:
-        print(f"   ❌ Error creating job: {e}")
+        logger.error(f"   ❌ Error creating job: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -541,29 +540,29 @@ async def trigger_scrape(request: ScrapeRequest, background_tasks: BackgroundTas
             agg = JobAggregator(validate_links=True)
             
             sources = request.sources or [s.SOURCE_NAME.lower() for s in agg.scrapers]
-            print(f"DEBUG SCRAPE: Starting scrape for sources: {sources}")
+            logger.info(f"🔍 Starting scrape for sources: {sources}")
             
             for source in sources:
                 SCRAPE_STATUS["current_source"] = source
                 SCRAPE_STATUS["last_updated"] = datetime.now()
-                print(f"DEBUG SCRAPE: Scraping source: {source}")
+                logger.info(f"🔍 Scraping source: {source}")
                 
                 try:
                     jobs, raw_count = await agg.scrape_source(source, limit=request.limit)
                     SCRAPE_STATUS["jobs_found"] += raw_count
                     SCRAPE_STATUS["jobs_new"] += len(jobs)
-                    print(f"DEBUG SCRAPE: {source} -> found={raw_count}, new={len(jobs)}")
+                    logger.info(f"✅ {source} -> found={raw_count}, new={len(jobs)}")
                 except Exception as e:
                     error_msg = f"{source}: {str(e)}"
                     tb = traceback.format_exc()
-                    print(f"Scrape error {error_msg}\n{tb}")
+                    logger.error(f"Scrape error {error_msg}")
                     SCRAPE_STATUS["errors"].append(error_msg)
             
             SCRAPE_STATUS["current_source"] = "Done"
             
         except Exception as e:
             import traceback
-            print(f"CRITICAL SCRAPE ERROR: {e}\n{traceback.format_exc()}")
+            logger.error(f"CRITICAL SCRAPE ERROR: {e}")
             SCRAPE_STATUS["errors"].append(f"CRITICAL: {str(e)}")
         finally:
             SCRAPE_STATUS["is_running"] = False
@@ -865,9 +864,11 @@ async def trigger_apply(job_id: str, background_tasks: BackgroundTasks):
         from src.core.applicant import Applicant
         from src.core.application import Application
         
+        logger.info(f"🎯 Starting application for: {job.title} at {job.company}")
+        
         # Check if cancelled before starting
         if running_applications.get(job_id, {}).get("cancelled"):
-            print(f"   🛑 Application {job_id} was cancelled before starting")
+            logger.info(f"   🛑 Application {job_id} was cancelled before starting")
             running_applications.pop(job_id, None)
             return
         
@@ -882,7 +883,7 @@ async def trigger_apply(job_id: str, background_tasks: BackgroundTasks):
              profile_path = Path("data/profile.json")
 
         if not profile_path.exists():
-            print(f"Profile not found at {profile_path} or data/profile.json")
+            logger.error(f"Profile not found at {profile_path} or data/profile.json")
             running_applications.pop(job_id, None)
             return
             
@@ -896,7 +897,7 @@ async def trigger_apply(job_id: str, background_tasks: BackgroundTasks):
              
              # Check cancellation
              if running_applications.get(job_id, {}).get("cancelled"):
-                 print(f"   🛑 Application {job_id} cancelled during setup")
+                 logger.info(f"   🛑 Application {job_id} cancelled during setup")
                  db.update_job_status(job_id, JobStatus.NEW)  # Reset to new
                  return
              
@@ -910,7 +911,7 @@ async def trigger_apply(job_id: str, background_tasks: BackgroundTasks):
              
              # Check cancellation before fill
              if running_applications.get(job_id, {}).get("cancelled"):
-                 print(f"   🛑 Application {job_id} cancelled before filling")
+                 logger.info(f"   🛑 Application {job_id} cancelled before filling")
                  db.update_job_status(job_id, JobStatus.NEW)
                  return
              
@@ -918,22 +919,24 @@ async def trigger_apply(job_id: str, background_tasks: BackgroundTasks):
              
              # Check cancellation after fill
              if running_applications.get(job_id, {}).get("cancelled"):
-                 print(f"   🛑 Application {job_id} cancelled - not updating status")
+                 logger.info(f"   🛑 Application {job_id} cancelled - not updating status")
                  db.update_job_status(job_id, JobStatus.NEW)
                  return
              
              if success:
                  db.update_job_status(job_id, JobStatus.APPLIED)
+                 logger.info(f"   🚀 SUCCESS - Applied to {job.title} at {job.company}")
              else:
                  # If it failed but wasn't marked rejected, mark failed
                  if job.status != JobStatus.REJECTED.value:
                      db.update_job_status(job_id, JobStatus.FAILED)
+                     logger.warning(f"   ❌ FAILED - Could not apply to {job.title} at {job.company}")
                      
         except asyncio.CancelledError:
-            print(f"   🛑 Application {job_id} task was cancelled")
+            logger.info(f"   🛑 Application {job_id} task was cancelled")
             db.update_job_status(job_id, JobStatus.NEW)
         except Exception as e:
-            print(f"Single apply error: {e}")
+            logger.error(f"Single apply error: {e}")
             if not running_applications.get(job_id, {}).get("cancelled"):
                 db.update_job_status(job_id, JobStatus.FAILED)
         finally:
@@ -963,7 +966,7 @@ async def abort_apply(job_id: str):
     
     # Mark as cancelled
     running_applications[job_id]["cancelled"] = True
-    print(f"   🛑 Abort requested for job {job_id}")
+    logger.info(f"   🛑 Abort requested for job {job_id}")
     
     # Reset job status
     db.update_job_status(job_id, JobStatus.NEW)
@@ -993,10 +996,12 @@ async def trigger_auto_apply_run(background_tasks: BackgroundTasks):
     async def run_wrapper():
         from src.orchestrator import run_auto_apply
         try:
+            logger.info("🚀 AUTO-APPLY SEQUENCE INITIATED — targeting 5 applications")
             # Run with default settings (5 applications per run)
             await run_auto_apply(max_applications=5, scrape_first=False)
+            logger.info("✅ AUTO-APPLY SEQUENCE COMPLETE")
         except Exception as e:
-            print(f"Auto-run error: {e}")
+            logger.error(f"Auto-run error: {e}")
             
     background_tasks.add_task(run_wrapper)
     return {"status": "started", "message": "Auto-apply sequence initiated"}
