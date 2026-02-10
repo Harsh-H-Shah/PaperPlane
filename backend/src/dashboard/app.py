@@ -575,18 +575,22 @@ async def trigger_scrape(request: ScrapeRequest, background_tasks: BackgroundTas
 
 @app.get("/api/activity")
 async def get_activity_log(lines: int = 50):
-    print(f"accessing activity log path: {Path(__file__).parent.parent.parent / 'logs' / 'activity.log'}")
-    """Get recent activity logs"""
+    """Get recent activity logs from in-memory buffer or log file"""
+    # Primary: read from in-memory ring buffer (always works)
+    from src.utils.logger import memory_handler
+    mem_logs = memory_handler.get_logs(lines)
+    if mem_logs:
+        return {"logs": mem_logs}
+    
+    # Fallback: try reading from log file
     log_path = Path(__file__).parent.parent.parent / "logs" / "activity.log"
     
     if not log_path.exists():
         return {"logs": []}
         
     try:
-        # Simple tail implementation
         with open(log_path, "r") as f:
             all_lines = f.readlines()
-            # Filter empty lines
             all_lines = [line.strip() for line in all_lines if line.strip()]
             return {"logs": all_lines[-lines:]}
     except Exception as e:

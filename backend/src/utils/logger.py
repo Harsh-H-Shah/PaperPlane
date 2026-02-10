@@ -1,7 +1,27 @@
 import logging
 import sys
 from pathlib import Path
+from collections import deque
 from logging.handlers import RotatingFileHandler
+
+
+class MemoryLogHandler(logging.Handler):
+    """In-memory ring buffer for recent log entries. Always works, no file I/O."""
+    
+    def __init__(self, capacity: int = 1000):
+        super().__init__()
+        self.buffer: deque = deque(maxlen=capacity)
+    
+    def emit(self, record):
+        self.buffer.append(self.format(record))
+    
+    def get_logs(self, n: int = 50) -> list[str]:
+        return list(self.buffer)[-n:]
+
+
+# Global memory handler instance (accessible by the API)
+memory_handler = MemoryLogHandler(capacity=1000)
+
 
 def setup_logger(name: str = "PaperPlane", log_file: str = "logs/activity.log") -> logging.Logger:
     logger = logging.getLogger(name)
@@ -10,6 +30,14 @@ def setup_logger(name: str = "PaperPlane", log_file: str = "logs/activity.log") 
     # Avoid duplicate handlers
     if logger.handlers:
         return logger
+    
+    # Memory Handler (always works — the API reads from this)
+    mem_formatter = logging.Formatter(
+        '%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    memory_handler.setFormatter(mem_formatter)
+    logger.addHandler(memory_handler)
     
     # Console Handler (always works)
     console_handler = logging.StreamHandler(sys.stdout)
@@ -32,7 +60,7 @@ def setup_logger(name: str = "PaperPlane", log_file: str = "logs/activity.log") 
         file_handler.setFormatter(file_formatter)
         logger.addHandler(file_handler)
     except (PermissionError, OSError) as e:
-        logger.warning(f"Could not create log file {log_file}: {e}. Logging to stdout only.")
+        logger.warning(f"Could not create log file {log_file}: {e}. Using memory + stdout only.")
         
     return logger
 
