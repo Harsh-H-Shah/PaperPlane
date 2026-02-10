@@ -31,7 +31,7 @@ export default function ArsenalPage() {
         const [profileData, gamData, scraperData] = await Promise.all([
           api.getProfile(),
           api.getGamification(),
-          fetch('http://localhost:8080/api/scrapers/status').then(r => r.json()),
+          api.getScraperStatus(),
         ]);
         setProfile(profileData);
         setGamification(gamData);

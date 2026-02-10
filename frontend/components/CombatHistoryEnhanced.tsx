@@ -180,7 +180,7 @@ export default function CombatHistoryEnhanced({ history, onViewJob, onApplyJob, 
                       </button>
                     )}
                     <a
-                      href={`http://localhost:8080/api/jobs/${item.id}`}
+                      href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/jobs/${item.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}

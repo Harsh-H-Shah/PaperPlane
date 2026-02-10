@@ -224,6 +224,9 @@ export const api = {
     }),
 
   // ==================== Scraping ====================
+  getScraperStatus: () =>
+    fetchApi<{ scrapers: Array<{ name: string; enabled: boolean; configured: boolean; icon: string; note?: string }> }>('/api/scrapers/status'),
+
   triggerScrape: (sources?: string[], limit?: number) =>
     fetchApi<{ status: string; message: string }>('/api/scrape', {
       method: 'POST',
