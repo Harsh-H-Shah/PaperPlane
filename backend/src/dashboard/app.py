@@ -535,7 +535,7 @@ async def trigger_scrape(request: ScrapeRequest, background_tasks: BackgroundTas
         
         try:
             from src.scrapers.aggregator import JobAggregator
-            import traceback
+
             # Run manually to update progress
             agg = JobAggregator(validate_links=True)
             
@@ -561,7 +561,7 @@ async def trigger_scrape(request: ScrapeRequest, background_tasks: BackgroundTas
             SCRAPE_STATUS["current_source"] = "Done"
             
         except Exception as e:
-            import traceback
+
             logger.error(f"CRITICAL SCRAPE ERROR: {e}")
             SCRAPE_STATUS["errors"].append(f"CRITICAL: {str(e)}")
         finally:
