@@ -1,8 +1,8 @@
-# AutoApplier 🚀
+# PaperPlane ✈️
 
 > An intelligent, automated job application system for tech positions
 
-AutoApplier is a free, open-source tool that automates the job application process for software engineering and tech positions. It discovers job postings from multiple sources, categorizes application types, auto-fills forms using your personal information, and leverages LLMs for handling complex questions.
+PaperPlane is a free, open-source tool that automates the job application process for software engineering and tech positions. It discovers job postings from multiple sources, categorizes application types, auto-fills forms using your personal information, and leverages LLMs for handling complex questions.
 
 ## ✨ Features
 
@@ -12,104 +12,83 @@ AutoApplier is a free, open-source tool that automates the job application proce
 - **LLM-Powered Responses**: Uses Gemini Pro (or other LLMs) for open-ended questions
 - **Human-in-the-Loop**: Notifies you via Discord/ntfy when manual input is required
 - **Resume Generation**: Creates tailored PDF resumes for specific job types
+- **Gamified Dashboard**: Track your progress with XP, streaks, and rank-ups
 - **Completely Free**: No paid services required
 
 ## 🏗️ Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                            AutoApplier                                   │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐             │
-│  │   Scrapers   │ ──▶ │   Filters    │ ──▶ │  Classifiers │             │
-│  │  (Job Disc.) │     │ (Entry-level)│     │  (ATS Type)  │             │
-│  └──────────────┘     └──────────────┘     └──────────────┘             │
-│         │                                          │                     │
-│         ▼                                          ▼                     │
-│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐             │
-│  │   Database   │ ◀─▶ │ Orchestrator │ ──▶ │   Fillers    │             │
-│  │   (SQLite)   │     │  (Workflow)  │     │ (Form Auto)  │             │
-│  └──────────────┘     └──────────────┘     └──────────────┘             │
-│                              │                     │                     │
-│                              ▼                     ▼                     │
-│                       ┌──────────────┐     ┌──────────────┐             │
-│                       │   Notifier   │     │  LLM Client  │             │
-│                       │(Discord/ntfy)│     │ (Gemini Pro) │             │
-│                       └──────────────┘     └──────────────┘             │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
+│                              PaperPlane                                │
+├──────────────────────────────┬──────────────────────────────────────────┤
+│       Frontend (Next.js)     │         Backend (FastAPI + Python)       │
+│                              │                                         │
+│  • Dashboard UI              │  ┌──────────────┐     ┌──────────────┐  │
+│  • Stats & Charts            │  │   Scrapers   │ ──▶ │   Filters    │  │
+│  • Job Management            │  │  (Job Disc.) │     │ (Entry-level)│  │
+│  • Gamification System       │  └──────────────┘     └──────────────┘  │
+│                              │         │                    │           │
+│                              │         ▼                    ▼           │
+│                              │  ┌──────────────┐     ┌──────────────┐  │
+│                              │  │   Database   │ ◀─▶ │ Orchestrator │  │
+│                              │  │   (SQLite)   │     │  (Workflow)  │  │
+│                              │  └──────────────┘     └──────────────┘  │
+│                              │                              │          │
+│                              │         ┌──────────────┐     │          │
+│                              │         │   Fillers    │◀────┘          │
+│                              │         │ (Form Auto)  │               │
+│                              │         └──────┬───────┘               │
+│                              │                │                        │
+│                              │         ┌──────┴───────┐               │
+│                              │         │  LLM Client  │               │
+│                              │         │ (Gemini Pro) │               │
+│                              │         └──────────────┘               │
+└──────────────────────────────┴──────────────────────────────────────────┘
 ```
-
-## 🔄 How It Works
-
-1. **Job Discovery**: Scrapers aggregate job listings from multiple sources (LinkedIn, CVRVE, Simplify, etc.)
-2. **Filtering**: The JobFilter removes senior/lead roles and keeps entry-level/junior positions
-3. **Link Validation**: Dead links, phishing attempts, and suspicious domains are filtered out
-4. **Classification**: The detector identifies the ATS type (Greenhouse, Lever, Workday, etc.)
-5. **Form Filling**: Platform-specific fillers auto-populate application forms using your profile
-6. **LLM Assistance**: Open-ended questions are answered using Gemini Pro with your context
-7. **Notifications**: When human input is needed, you're notified via Discord or ntfy
-
-## 🧠 Technical Principles
-
-### Modular Plugin Architecture
-Each component (scrapers, fillers, classifiers) follows a base class pattern, making it easy to add new job sources or ATS platforms without modifying core logic.
-
-### Async-First Design
-All I/O-bound operations (web scraping, API calls, form interactions) use Python's `asyncio` for efficient parallel processing. The `JobAggregator` scrapes multiple sources concurrently.
-
-### Human-in-the-Loop (HITL)
-The system prioritizes automation but recognizes its limits. When encountering CAPTCHAs, complex questions, or unfamiliar forms, it pauses and notifies you rather than guessing.
-
-### Incremental Processing
-The `IncrementalScraper` tracks seen URLs to avoid reprocessing. Jobs are stored in SQLite with status tracking, ensuring no duplicate applications.
-
-### LLM-Powered Intelligence
-Context-aware prompts feed your profile, resume, and job description to Gemini Pro. The `AnswerValidator` ensures responses are appropriate before submission.
 
 ## 🚀 Quick Start
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/AutoApplier.git
-cd AutoApplier
+git clone https://github.com/Harsh-H-Shah/PaperPlane.git
+cd PaperPlane
 
-# Create virtual environment
+# --- Backend Setup ---
+cd backend
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
+source venv/bin/activate
 pip install -r requirements.txt
+playwright install chromium
 
-# Set up your profile
+# --- Frontend Setup ---
+cd ../frontend
+npm install
+
+# --- Configure ---
+cp .env.example .env
+# Edit .env with your Gemini API key and notification webhook
 cp data/profile.example.json data/profile.json
 # Edit profile.json with your information
 
-# Configure settings
-cp .env.example .env
-# Add your Gemini API key and notification webhook
+# --- Run ---
+# Terminal 1: Backend API
+cd backend && python main.py dashboard
 
-# Run the dashboard
-python main.py dashboard
-
-# Or scrape jobs manually
-python main.py scrape --limit 50
-
-# Apply to jobs
-python main.py apply --limit 5
+# Terminal 2: Frontend
+cd frontend && npm run dev
 ```
 
 ## 📋 CLI Commands
 
 | Command | Description |
 |---------|-------------|
+| `init` | Initialize configuration files |
 | `status` | Show system status and statistics |
 | `scrape` | Discover new jobs from all sources |
 | `jobs` | List jobs with optional status filter |
 | `apply` | Auto-apply to pending jobs |
 | `apply-url` | Apply to a specific job URL |
-| `dashboard` | Launch the web dashboard |
+| `dashboard` | Launch the API server |
 | `scheduler` | Start automated scraping scheduler |
 | `resume` | Generate a tailored PDF resume |
 | `h1b-sponsors` | Fetch H1B sponsor company data |
@@ -118,6 +97,7 @@ python main.py apply --limit 5
 ## 📋 Requirements
 
 - Python 3.10+
+- Node.js 18+
 - Chrome/Chromium browser (for Playwright)
 - Gemini Pro API key (free tier available)
 - Optional: Discord webhook or ntfy topic for notifications
@@ -131,20 +111,7 @@ All configuration is managed via environment variables (`.env` file):
 - `NTFY_TOPIC`: ntfy.sh topic for mobile notifications
 - `EMAIL_USER` / `EMAIL_PASSWORD`: For email verification code extraction
 
-## 🗺️ Future Roadmap
-
-### AI-Powered Resume Tailoring
-A pipeline to automatically customize resumes for each job application:
-- Takes job description as input and analyzes key requirements
-- Uses Gemini API to intelligently modify `main.tex` (add/subtract skills, reorder experience)
-- Compiles LaTeX on-the-fly to generate a tailored PDF for each role
-- Integrates with the application flow for role-specific submissions
-
-### Additional Planned Features
-- **Email Integration**: Parse inbox for interview invites, rejections, and application confirmations
-- **Application Analytics**: Track conversion rates, response times, and success patterns
-- **Multi-Resume Support**: Maintain different resume variants for different role types
-- **Cover Letter Generation**: Context-aware cover letters using job description + profile
+See [DOCS.md](DOCS.md) for full documentation and [HOSTING.md](HOSTING.md) for deployment guide.
 
 ## 📜 License
 

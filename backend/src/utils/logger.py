@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
 
-def setup_logger(name: str = "AutoApplier", log_file: str = "logs/activity.log") -> logging.Logger:
+def setup_logger(name: str = "PaperPlane", log_file: str = "logs/activity.log") -> logging.Logger:
     # Ensure logs directory exists
     log_path = Path(log_file)
     log_path.parent.mkdir(parents=True, exist_ok=True)

@@ -89,7 +89,7 @@ class GreenhouseJobsScraper(BaseScraper):
                 params = {"content": "true"}
                 
                 headers = {
-                    "User-Agent": "AutoApplier/1.0",
+                    "User-Agent": "PaperPlane/1.0",
                     "Accept": "application/json",
                 }
                 

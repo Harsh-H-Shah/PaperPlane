@@ -66,6 +66,9 @@ temp/
 
 # Debug outputs
 probe_output.txt
+backend/data/debug_*.html
+backend/data/*.corrupted
+backend/src/scripts/data/
 
 # Frontend build artifacts
 frontend/.next/

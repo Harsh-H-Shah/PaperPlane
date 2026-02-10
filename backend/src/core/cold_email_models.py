@@ -100,79 +100,108 @@ class ColdEmail:
     error_message: Optional[str] = None
 
 
-# Default email templates
+# Default email templates - Short, direct, high-conversion cold emails
 DEFAULT_TEMPLATES = [
+    # ── Recruiter Templates ──
     EmailTemplate(
         id="recruiter_intro",
-        name="Recruiter Introduction",
-        subject="Re: {job_title} at {company} - Quick Question",
+        name="Recruiter - Quick Intro",
+        subject="{job_title} @ {company} — {my_name}",
         body="""Hi {first_name},
 
 {personalized_hook}
 
-I recently applied for the {job_title} position at {company} and wanted to reach out directly. With my background in {my_skills}, I believe I could make a meaningful contribution to your team.
+I saw the {job_title} role and wanted to reach out. I'm a {my_current_role} with experience in {my_skills} — most recently {my_recent_work}.
 
-I'd love to learn more about the role and share how my experience aligns with what you're looking for. Would you have 15 minutes for a quick chat this week?
+Happy to send over more details or jump on a quick call if the timing works.
 
-Best regards,
-{my_name}
-
-P.S. Happy to send over my portfolio or any additional materials if helpful!""",
+Best,
+{my_name}""",
         persona_type=ContactPersona.RECRUITER,
         is_followup=False
     ),
     
     EmailTemplate(
+        id="recruiter_direct",
+        name="Recruiter - Straight to the Point",
+        subject="Re: {job_title} at {company}",
+        body="""Hi {first_name},
+
+I applied for the {job_title} position and wanted to put a face to the application.
+
+{personalized_hook}
+
+Quick background — {my_highlights}. I think there's a strong fit here and would love to chat if you agree.
+
+{my_name}""",
+        persona_type=ContactPersona.RECRUITER,
+        is_followup=False
+    ),
+
+    # ── Hiring Manager Templates ──
+    EmailTemplate(
         id="hiring_manager_intro",
-        name="Hiring Manager Introduction",
-        subject="{job_title} Application - {my_name}",
+        name="Hiring Manager - Intro",
+        subject="{job_title} — {my_name}",
         body="""Hi {first_name},
 
 {personalized_hook}
 
-I'm reaching out because I applied for the {job_title} role on your team and wanted to express my genuine interest in the position.
+I'm reaching out about the {job_title} role on your team. I've spent time {my_recent_work} and have hands-on experience with {my_skills}. {my_standout}
 
-What excites me most about this opportunity is {company_excitement}. I've been working on {my_recent_work}, and I see strong alignment with what your team is building.
+Would love to learn more about what your team is working on. Open to a quick chat anytime this week.
 
-Would you be open to a brief conversation about the role? I'd love to learn more about your team's priorities and share how I could contribute.
-
-Thanks for considering,
+Best,
 {my_name}""",
         persona_type=ContactPersona.HIRING_MANAGER,
         is_followup=False
     ),
     
     EmailTemplate(
-        id="engineering_manager_intro",
-        name="Engineering Manager Introduction", 
-        subject="Fellow Engineer Interested in {company}",
+        id="hiring_manager_short",
+        name="Hiring Manager - Short & Direct",
+        subject="Re: {job_title} @ {company}",
         body="""Hi {first_name},
 
 {personalized_hook}
 
-I came across the {job_title} role at {company} and was impressed by {tech_highlight}. As someone who specializes in {my_skills}, I'd love to learn more about the technical challenges your team is tackling.
+I applied for the {job_title} role and wanted to connect directly — {my_highlights}.
 
-I recently applied through your job board, but wanted to reach out directly to express my enthusiasm for potentially joining your team.
+I'd love to hear about the problems your team is solving. Free for a quick call this week?
 
-Would you be open to a quick technical chat? I'm genuinely curious about {company}'s engineering culture and stack.
+Best,
+{my_name}""",
+        persona_type=ContactPersona.HIRING_MANAGER,
+        is_followup=False
+    ),
+
+    # ── Engineering Manager Templates ──
+    EmailTemplate(
+        id="engineering_manager_intro",
+        name="Engineering Manager - Intro", 
+        subject="Quick note about {job_title} @ {company}",
+        body="""Hi {first_name},
+
+{personalized_hook}
+
+I applied for the {job_title} role and wanted to reach out. I'm a {my_current_role} who's worked across {my_skills} — {my_standout}
+
+Curious about the technical challenges your team is focused on. Would you be open to a brief chat?
 
 Best,
 {my_name}""",
         persona_type=ContactPersona.ENGINEERING_MANAGER,
         is_followup=False
     ),
-    
+
+    # ── Follow-ups ──
     EmailTemplate(
         id="followup_1",
-        name="First Follow-up (Day 3)",
+        name="Follow-up (Day 3)",
         subject="Re: {original_subject}",
         body="""Hi {first_name},
 
-I wanted to follow up on my previous email about the {job_title} position. I understand how busy things can get!
-
-I'm still very interested in the opportunity and would welcome any chance to discuss how I could contribute to {company}.
-
-Is there a better time or way to connect?
+Just bumping this up — I know things get busy. Still very interested in the {job_title} role and would love to connect when you have a moment.
 
 Best,
 {my_name}""",
@@ -182,17 +211,14 @@ Best,
     
     EmailTemplate(
         id="followup_2",
-        name="Second Follow-up (Day 7)",
+        name="Final Follow-up (Day 7)",
         subject="Re: {original_subject}",
         body="""Hi {first_name},
 
-Just wanted to send one final follow-up regarding the {job_title} role at {company}.
+Last note from me on this — if the timing isn't right, totally understand. But if the {job_title} role is still open, I'd welcome the chance to chat.
 
-If now isn't the right time, I completely understand. But if there's any opportunity to connect, even briefly, I'd appreciate the chance.
+Either way, appreciate your time.
 
-Either way, thanks for your time, and best of luck with your hiring!
-
-Cheers,
 {my_name}""",
         is_followup=True,
         followup_day=7

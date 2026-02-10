@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/lib/auth';
 
 // Valorant agent data with image URLs from official sources
 export const VALORANT_AGENTS: Record<string, { name: string; icon: string; color: string }> = {
@@ -30,7 +32,7 @@ export const VALORANT_AGENTS: Record<string, { name: string; icon: string; color
   iso: { name: 'Iso', icon: 'https://media.valorant-api.com/agents/0e38b510-41a8-5780-5e8f-568b2a4f2d6c/displayicon.png', color: '#7C3AED' },
   clove: { name: 'Clove', icon: 'https://media.valorant-api.com/agents/1dbf2edd-4729-0984-3115-daa5eed44993/displayicon.png', color: '#EC4899' },
 };
-// ... (omitting intermediate code to target specific chunks is cleaner if tools allow, but here I must be contiguous or use multi_replace. I'll use multi_replace to be safe and precise)
+
 
 
 interface NavItem {
@@ -110,21 +112,37 @@ export default function Sidebar({
   isDeploying 
 }: SidebarProps) {
   const pathname = usePathname();
+  const { isAdmin, login, logout } = useAuth();
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginToken, setLoginToken] = useState('');
+  const [loginError, setLoginError] = useState('');
   
   const agent = VALORANT_AGENTS[valorantAgent.toLowerCase()] || VALORANT_AGENTS.jett;
 
+  const handleLogin = async () => {
+    setLoginError('');
+    const success = await login(loginToken);
+    if (success) {
+      setShowLoginModal(false);
+      setLoginToken('');
+    } else {
+      setLoginError('Invalid token');
+    }
+  };
+
   return (
+    <>
     <aside className="w-64 min-h-screen bg-[var(--valo-dark)] border-r border-[var(--valo-gray-light)] flex flex-col">
       {/* Logo */}
       <div className="p-4 border-b border-[var(--valo-gray-light)]">
         <div className="flex items-center gap-2 p-2 tech-button">
-          <div className="w-8 h-8 bg-[var(--valo-red)] flex items-center justify-center clip-path-check">
-            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-            </svg>
-          </div>
+          <img 
+            src="/logo.png" 
+            alt="PaperPlane" 
+            className="w-8 h-8 object-contain"
+          />
           <span className="font-display text-2xl font-bold tracking-tighter text-[var(--valo-red)]">
-            AUTOAPPLIER
+            PAPERPLANE
           </span>
         </div>
       </div>
@@ -218,14 +236,21 @@ export default function Sidebar({
       <div className="p-4">
         <button
           onClick={onDeploy}
-          disabled={isDeploying}
+          disabled={isDeploying || !isAdmin}
           className={`w-full py-4 font-display font-bold tracking-wider text-lg transition-all duration-200 flex items-center justify-center gap-2 tech-button-solid ${
-            isDeploying
+            !isAdmin
               ? 'bg-[var(--valo-gray)] text-[var(--valo-text-dim)] cursor-not-allowed'
-              : 'bg-[var(--valo-red)] text-white hover:shadow-[0_0_30px_rgba(255,70,85,0.5)] active:scale-95'
+              : isDeploying
+                ? 'bg-[var(--valo-gray)] text-[var(--valo-text-dim)] cursor-not-allowed'
+                : 'bg-[var(--valo-red)] text-white hover:shadow-[0_0_30px_rgba(255,70,85,0.5)] active:scale-95'
           }`}
         >
-          {isDeploying ? (
+          {!isAdmin ? (
+            <>
+              <span className="text-xl">🔒</span>
+              ADMIN ONLY
+            </>
+          ) : isDeploying ? (
             <>
               <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -241,12 +266,79 @@ export default function Sidebar({
           )}
         </button>
         <p className="text-center text-xs text-[var(--valo-text-dim)] mt-2">
-          Scan + Auto Apply
+          {isAdmin ? 'Scan + Auto Apply' : 'Login to unlock'}
         </p>
       </div>
+
+      {/* Admin Login/Logout */}
+      <div className="p-4 pt-0">
+        {isAdmin ? (
+          <button
+            onClick={logout}
+            className="w-full py-2 text-xs font-semibold tracking-wider text-[var(--valo-text-dim)] hover:text-[var(--valo-red)] transition-colors flex items-center justify-center gap-2"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            LOGOUT
+          </button>
+        ) : (
+          <button
+            onClick={() => setShowLoginModal(true)}
+            className="w-full py-2 text-xs font-semibold tracking-wider text-[var(--valo-text-dim)] hover:text-[var(--valo-cyan)] transition-colors flex items-center justify-center gap-2"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            </svg>
+            ADMIN LOGIN
+          </button>
+        )}
+      </div>
     </aside>
+
+    {/* Login Modal */}
+    {showLoginModal && (
+      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 animate-in fade-in">
+        <div className="tech-border bg-[var(--valo-gray)] rounded-lg p-6 max-w-sm mx-4 w-full animate-in zoom-in-95">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-lg bg-[var(--valo-cyan)]/20 flex items-center justify-center">
+              <svg className="w-5 h-5 text-[var(--valo-cyan)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+              </svg>
+            </div>
+            <h3 className="font-display text-lg font-bold text-[var(--valo-text)] tracking-wider">
+              ADMIN ACCESS
+            </h3>
+          </div>
+          <input
+            type="password"
+            value={loginToken}
+            onChange={(e) => setLoginToken(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+            placeholder="Enter admin token"
+            className="w-full px-4 py-3 bg-[var(--valo-dark)] border border-[var(--valo-gray-light)] rounded-lg text-[var(--valo-text)] placeholder-[var(--valo-text-dim)] focus:border-[var(--valo-cyan)] focus:outline-none transition-colors mb-3 font-mono text-sm"
+            autoFocus
+          />
+          {loginError && (
+            <p className="text-[var(--valo-red)] text-xs mb-3 font-semibold">{loginError}</p>
+          )}
+          <div className="flex gap-3">
+            <button
+              onClick={() => { setShowLoginModal(false); setLoginToken(''); setLoginError(''); }}
+              className="flex-1 py-2.5 rounded-lg bg-[var(--valo-gray-light)] text-[var(--valo-text)] font-semibold text-sm hover:bg-opacity-80 transition-all"
+            >
+              CANCEL
+            </button>
+            <button
+              onClick={handleLogin}
+              className="flex-1 py-2.5 rounded-lg bg-[var(--valo-cyan)] text-[var(--valo-dark)] font-semibold text-sm hover:shadow-[0_0_15px_rgba(0,255,255,0.4)] transition-all"
+            >
+              LOGIN
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
-
-// Export agents for use in profile page
-export { VALORANT_AGENTS };

@@ -38,16 +38,14 @@ class EmailPersonalizer:
             
             response = self.llm_client.generate(
                 prompt,
-                max_tokens=100,
-                temperature=0.7  # Some creativity
+                max_tokens=80,
+                temperature=0.6
             )
             
             if response:
-                # Clean up response
                 hook = response.strip()
                 hook = hook.replace('"', '').replace("'", "")
                 
-                # Ensure it's not too long
                 if len(hook) > max_length:
                     hook = hook[:max_length].rsplit(' ', 1)[0] + "..."
                 
@@ -62,59 +60,58 @@ class EmailPersonalizer:
         """Build the prompt for generating personalized hook"""
         
         persona_context = {
-            ContactPersona.RECRUITER: "a recruiter who screens candidates",
-            ContactPersona.HIRING_MANAGER: "a hiring manager making final decisions",
-            ContactPersona.ENGINEERING_MANAGER: "an engineering manager focused on team fit",
-            ContactPersona.HR: "an HR professional managing the hiring process",
-            ContactPersona.TALENT_ACQUISITION: "a talent acquisition specialist sourcing candidates",
+            ContactPersona.RECRUITER: "a recruiter",
+            ContactPersona.HIRING_MANAGER: "a hiring manager",
+            ContactPersona.ENGINEERING_MANAGER: "an engineering manager",
+            ContactPersona.HR: "an HR professional",
+            ContactPersona.TALENT_ACQUISITION: "a talent acquisition specialist",
         }
         
         role_context = persona_context.get(
             contact.persona, 
-            "a professional at this company"
+            "a professional"
         )
         
         job_context = ""
         if job:
-            job_context = f"The candidate applied for: {job.title}"
+            job_context = f"The sender applied for: {job.title}"
         
-        prompt = f"""Write a single, professional opening line for a cold email to {contact.first_name}, who is {role_context} at {contact.company}.
+        company = (contact.company if contact else "") or "the company"
+        
+        prompt = f"""Write ONE short, natural opening line for a cold email to {contact.first_name} ({role_context} at {company}).
 
 Context:
 - Recipient: {contact.name}, {contact.title}
-- Company: {contact.company}
+- Company: {company}
 {job_context}
 
-Requirements:
-- Be warm but professional
-- Show genuine interest in the company
-- Don't be overly flattering or salesy
-- Keep it concise (1-2 sentences max)
-- Don't mention applying or job search directly
-- Focus on connection or shared interest
+Rules:
+- 1 sentence max, under 20 words
+- Sound like a real person, not a bot
+- No "I hope this finds you well" or "I hope you're doing well"
+- No excessive flattery or buzzwords
+- Reference something specific about the company if possible
+- Casual-professional tone — like messaging a colleague you haven't met yet
 
-Write ONLY the opening line, nothing else:"""
+Write ONLY the line, nothing else:"""
         
         return prompt
     
     def _get_fallback_hook(self, contact: Contact) -> str:
-        """Get a fallback hook when LLM is unavailable"""
+        """Fallback hooks that sound human, not AI-generated"""
+        company = (contact.company if contact else "") or "your company"
         
         fallbacks = {
-            ContactPersona.RECRUITER: f"I hope this finds you well! I came across {contact.company}'s team and was impressed by what you're building.",
-            
-            ContactPersona.HIRING_MANAGER: f"I've been following {contact.company}'s work and am excited about the direction your team is taking.",
-            
-            ContactPersona.ENGINEERING_MANAGER: f"As a fellow engineer, I've been impressed by the technical challenges {contact.company} is tackling.",
-            
-            ContactPersona.HR: f"I hope you're having a great week! I wanted to reach out about opportunities at {contact.company}.",
-            
-            ContactPersona.TALENT_ACQUISITION: f"I've heard great things about {contact.company}'s culture and wanted to connect.",
+            ContactPersona.RECRUITER: f"I came across the role at {company} and it caught my eye.",
+            ContactPersona.HIRING_MANAGER: f"I've been looking into {company}'s engineering work and it's impressive stuff.",
+            ContactPersona.ENGINEERING_MANAGER: f"I've been following what {company}'s engineering team has been shipping — really solid work.",
+            ContactPersona.HR: f"I saw {company} is hiring and wanted to reach out.",
+            ContactPersona.TALENT_ACQUISITION: f"I came across {company}'s open roles and wanted to connect.",
         }
         
         return fallbacks.get(
-            contact.persona,
-            f"I came across {contact.company} and was impressed by what your team is building."
+            contact.persona if contact else ContactPersona.UNKNOWN,
+            f"I came across {company} and wanted to reach out."
         )
     
     async def personalize_email(
@@ -128,12 +125,8 @@ Write ONLY the opening line, nothing else:"""
         Fully personalize an email subject and body.
         Returns (personalized_subject, personalized_body) tuple.
         """
-        # Generate hook
         hook = await self.generate_personalized_hook(contact, job)
-        
-        # Replace placeholder
         personalized_body = body.replace("{personalized_hook}", hook)
-        
         return subject, personalized_body
     
     def generate_subject_variation(
@@ -142,14 +135,11 @@ Write ONLY the opening line, nothing else:"""
         contact: Contact
     ) -> str:
         """Generate a slight variation of the subject line"""
-        
-        # Simple variations - could be enhanced with LLM
         variations = [
             base_subject,
             f"Quick Question - {base_subject}",
             f"Re: {base_subject}",
         ]
         
-        # Pick based on contact persona for consistency
         idx = hash(contact.email) % len(variations)
         return variations[idx]

@@ -1,4 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-  <rect width="24" height="24" fill="#ff4655" />
-  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" fill="white" transform="translate(12, 12) scale(0.7) translate(-12, -12)" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="planeGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00D9FF"/>
+      <stop offset="100%" style="stop-color:#00FFA3"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="12" fill="#0A1015"/>
+  <g transform="translate(8, 10)">
+    <!-- Paper plane body -->
+    <path d="M2 26L46 4L18 38L14 26Z" fill="none" stroke="url(#planeGrad)" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M14 26L46 4L18 38" fill="none" stroke="url(#planeGrad)" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M14 26L18 38L22 28L46 4" fill="none" stroke="url(#planeGrad)" stroke-width="2" stroke-linejoin="round" opacity="0.6"/>
+    <!-- Motion trail dots -->
+    <circle cx="6" cy="36" r="1.5" fill="#00D9FF" opacity="0.7"/>
+    <circle cx="2" cy="40" r="1" fill="#00D9FF" opacity="0.4"/>
+    <circle cx="10" cy="34" r="1" fill="#00D9FF" opacity="0.5"/>
+  </g>
 </svg>

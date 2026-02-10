@@ -16,13 +16,13 @@ from src.utils.database import get_db
 from src.core.applicant import Applicant
 from src.core.job import JobStatus
 
-app = typer.Typer(name="autoapplier", add_completion=False)
+app = typer.Typer(name="paperplane", add_completion=False)
 console = Console()
 
 
 @app.command()
 def init():
-    console.print("\n🚀 [bold blue]Initializing AutoApplier...[/bold blue]\n")
+    console.print("\n🚀 [bold blue]Initializing PaperPlane...[/bold blue]\n")
     
     settings = get_settings()
     settings.ensure_directories()
@@ -48,7 +48,7 @@ def init():
 
 @app.command()
 def status():
-    console.print("\n📊 [bold blue]AutoApplier Status[/bold blue]\n")
+    console.print("\n📊 [bold blue]PaperPlane Status[/bold blue]\n")
     
     settings = get_settings()
     db = get_db()
@@ -173,7 +173,7 @@ def apply(
     visible: bool = typer.Option(True, "--visible/--headless", "-v/-h", help="Show browser window"),
 ):
     mode = "[DRY RUN] " if dry_run else ""
-    console.print(f"\n📝 {mode}[bold blue]AutoApplier Starting...[/bold blue]\n")
+    console.print(f"\n📝 {mode}[bold blue]PaperPlane Starting...[/bold blue]\n")
     
     from src.utils.config import get_settings
     settings = get_settings()
@@ -352,7 +352,7 @@ def config():
 @app.command()
 def version():
     from src import __version__
-    console.print(f"\n🚀 AutoApplier v{__version__}\n")
+    console.print(f"\n🚀 PaperPlane v{__version__}\n")
 
 
 @app.command(name="llm-usage")
@@ -409,7 +409,7 @@ def test_llm():
         
         console.print("Sending test query...")
         response = client.generate(
-            "Reply with exactly: 'AutoApplier LLM connection successful!'",
+            "Reply with exactly: 'PaperPlane LLM connection successful!'",
             max_tokens=50,
             temperature=0.0
         )

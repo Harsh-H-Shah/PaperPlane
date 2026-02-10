@@ -54,7 +54,7 @@ class NtfyNotifier(BaseNotifier):
     
     def get_subscribe_instructions(self) -> str:
         return f"""
-📱 Subscribe to AutoApplier notifications:
+📱 Subscribe to PaperPlane notifications:
 
 1. Install ntfy app on your phone
 2. Subscribe to topic: {self.topic}

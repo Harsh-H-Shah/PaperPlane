@@ -37,7 +37,7 @@ class DiscordNotifier(BaseNotifier):
             if notification.tags:
                 embed["footer"] = {"text": " | ".join(notification.tags)}
             
-            payload = {"username": "AutoApplier", "embeds": [embed]}
+            payload = {"username": "PaperPlane", "embeds": [embed]}
             
             async with httpx.AsyncClient() as client:
                 response = await client.post(self.webhook_url, json=payload, timeout=10)

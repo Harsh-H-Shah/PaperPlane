@@ -14,7 +14,7 @@ class ActivityReporter:
         <!DOCTYPE html>
         <html>
         <head>
-            <title>AutoApplier Activity</title>
+            <title>PaperPlane Activity</title>
             <meta http-equiv="refresh" content="30"> <!-- Auto refresh every 30s -->
             <style>
                 body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f0f2f5; }

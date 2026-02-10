@@ -23,6 +23,13 @@ from src.fillers.universal_filler import UniversalFiller
 from src.fillers.redirect_filler import RedirectFiller
 from src.utils.logger import logger
 
+# Try to import AI Agent filler (free alternative to Stagehand)
+try:
+    from src.fillers.ai_agent_filler import AIAgentFiller
+    AI_AGENT_AVAILABLE = True
+except ImportError:
+    AI_AGENT_AVAILABLE = False
+
 class Orchestrator:
     def __init__(self, applicant: Applicant):
         self.settings = get_settings()
@@ -49,7 +56,7 @@ class Orchestrator:
         }
     
     async def setup(self) -> None:
-        logger.info("🚀 Setting up AutoApplier...")
+        logger.info("🚀 Setting up PaperPlane...")
         
         if self.settings.gemini_api_key:
             try:
@@ -321,11 +328,37 @@ class Orchestrator:
             filler = filler_class(applicant=self.applicant, llm_client=self.llm_client)
             
             if not await filler.can_handle(page):
-                logger.warning(f"   ⚠️ Filler can't handle this page")
-                return False
+                logger.warning(f"   ⚠️ {filler_class.__name__} can't handle this page")
+                
+                # Fallback to AI Agent filler (free alternative to Stagehand)
+                if AI_AGENT_AVAILABLE and self.llm_client:
+                    logger.info("   🤖 Falling back to AI Agent filler (free, works on any form)...")
+                    try:
+                        ai_filler = AIAgentFiller(applicant=self.applicant, llm_client=self.llm_client)
+                        success = await ai_filler.fill(page, job, application)
+                        screenshot_path = await self.browser_manager.take_screenshot(page, f"job_{job.id[:8]}_filled")
+                        application.screenshots.append(screenshot_path)
+                        self.db.update_application(application)
+                        return success
+                    except Exception as e:
+                        logger.error(f"   ❌ AI Agent filler also failed: {e}")
+                        return False
+                else:
+                    return False
             
             logger.info(f"   ✏️ Filling form...")
             success = await filler.fill(page, job, application)
+            
+            # If filler failed, try AI Agent as fallback
+            if not success and AI_AGENT_AVAILABLE and self.llm_client:
+                logger.info("   🤖 Primary filler failed, trying AI Agent filler as fallback...")
+                try:
+                    ai_filler = AIAgentFiller(applicant=self.applicant, llm_client=self.llm_client)
+                    success = await ai_filler.fill(page, job, application)
+                    if success:
+                        logger.info("   ✅ AI Agent filler succeeded!")
+                except Exception as e:
+                    logger.warning(f"   ⚠️ AI Agent fallback also failed: {e}")
             
             screenshot_path = await self.browser_manager.take_screenshot(page, f"job_{job.id[:8]}_filled")
             application.screenshots.append(screenshot_path)

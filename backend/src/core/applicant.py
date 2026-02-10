@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from typing import Optional
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, model_validator
 
 
 class Address(BaseModel):
@@ -100,6 +100,22 @@ class Skills(BaseModel):
     cloud_devops: list[str] = Field(default_factory=list)
     tools: list[str] = Field(default_factory=list)
     soft_skills: list[str] = Field(default_factory=list)
+    
+    @model_validator(mode='before')
+    @classmethod
+    def normalize_languages(cls, data):
+        """Handle 'languages' field (list of strings) as alias for programming_languages"""
+        if isinstance(data, dict):
+            # If 'languages' exists but 'programming_languages' doesn't, convert
+            if 'languages' in data and 'programming_languages' not in data:
+                langs = data.pop('languages')
+                if isinstance(langs, list):
+                    data['programming_languages'] = [
+                        {"name": lang, "level": "Advanced", "years": 0}
+                        if isinstance(lang, str) else lang
+                        for lang in langs
+                    ]
+        return data
     
     @property
     def all_technical(self) -> list[str]:

@@ -78,19 +78,22 @@ export default function MissionsPage() {
         if (debouncedSearch) params.search = debouncedSearch;
         if (sortBy) params.sort = sortBy;
 
-        const [profileData, gamData, jobsData] = await Promise.all([
-          api.getProfile(),
-          api.getGamification(),
-          api.getJobs(params),
-        ]);
-        setProfile(profileData);
-        setGamification(gamData);
+        // Fetch jobs first for faster display, then profile/gamification
+        const jobsData = await api.getJobs(params);
         setJobs(jobsData.jobs);
         setHasMore(jobsData.has_more);
         setPage(1);
+        setLoading(false); // Set loading false early
+        
+        // Fetch profile/gamification in background
+        const [profileData, gamData] = await Promise.all([
+          api.getProfile(),
+          api.getGamification(),
+        ]);
+        setProfile(profileData);
+        setGamification(gamData);
       } catch (err) {
         console.error('Failed to fetch:', err);
-      } finally {
         setLoading(false);
       }
     };
@@ -525,22 +528,24 @@ export default function MissionsPage() {
                 {jobs.map((job, index) => (
                   <motion.div
                     key={job.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, x: 20 }}
-                    transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.5) }}
-                    className={`tech-border overflow-hidden card-hover transition-all duration-500 ${
+                    transition={{ duration: 0.15, delay: Math.min(index * 0.01, 0.2) }}
+                    className={`tech-border overflow-hidden card-hover transition-all duration-200 ${
                        exitingJobIds.has(job.id) ? 'opacity-0 translate-x-full scale-95 pointer-events-none' : 'opacity-100 translate-x-0 scale-100'
                     }`}
                   >
                   <div 
-                    className="p-5 cursor-pointer relative group"
-                    onClick={() => setSelectedJob(selectedJob?.id === job.id ? null : job)}
+                    className="p-5 relative group"
                   >
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-[var(--valo-red)] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-200"></div>
 
                     <div className="flex items-center justify-between pl-2">
-                      <div>
+                      <div 
+                        className="flex-1 cursor-pointer"
+                        onClick={() => setSelectedJob(selectedJob?.id === job.id ? null : job)}
+                      >
                         <h3 className="font-display font-semibold text-xl text-[var(--valo-text)] group-hover:text-[var(--valo-red)] transition-colors">
                           {job.title}
                         </h3>
@@ -548,32 +553,74 @@ export default function MissionsPage() {
                           {job.company.toUpperCase()} <span className="text-[var(--valo-gray-light)]">|</span> {job.location || 'REMOTE'} <span className="text-[var(--valo-gray-light)]">|</span> <span className="text-[var(--valo-cyan)]">{job.source.toUpperCase()}</span>
                         </p>
                       </div>
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-3">
+                        {/* Quick Apply Button */}
+                        {(job.status === 'new' || job.status === 'needs_review' || job.status === 'failed') && !deployingJobs.has(job.id) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleApplyJob(job.id);
+                            }}
+                            className={`px-4 py-2 text-xs font-bold tracking-wider transition-all ${
+                              job.status === 'failed' 
+                                ? 'bg-[var(--valo-red)]/20 border border-[var(--valo-red)] text-[var(--valo-red)] hover:bg-[var(--valo-red)]/30'
+                                : 'bg-[var(--valo-green)]/20 border border-[var(--valo-green)] text-[var(--valo-green)] hover:bg-[var(--valo-green)]/30'
+                            }`}
+                            style={{ clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)' }}
+                          >
+                            ⚡ APPLY
+                          </button>
+                        )}
+                        {deployingJobs.has(job.id) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAbortJob(job.id);
+                            }}
+                            disabled={abortingJobs.has(job.id)}
+                            className="px-4 py-2 text-xs font-bold tracking-wider bg-[var(--valo-red)]/20 border border-[var(--valo-red)] text-[var(--valo-red)] hover:bg-[var(--valo-red)]/30 transition-all disabled:opacity-50"
+                            style={{ clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)' }}
+                          >
+                            {abortingJobs.has(job.id) ? 'STOPPING...' : 'STOP'}
+                          </button>
+                        )}
                         <span className={`px-3 py-1 text-xs font-bold tracking-wider uppercase border ${getStatusStyle(job.status)}`} style={{ clipPath: 'polygon(10% 0, 100% 0, 100% 100%, 0 100%, 0 20%)' }}>
                           {job.status.replace('_', ' ')}
                         </span>
-                        <svg 
-                          className={`w-5 h-5 text-[var(--valo-text-dim)] transition-transform duration-300 ${selectedJob?.id === job.id ? 'rotate-180 text-[var(--valo-red)]' : ''}`}
-                          fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        <button
+                          onClick={() => setSelectedJob(selectedJob?.id === job.id ? null : job)}
+                          className="text-[var(--valo-text-dim)] hover:text-[var(--valo-red)] transition-colors"
                         >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
+                          <svg 
+                            className={`w-5 h-5 transition-transform duration-300 ${selectedJob?.id === job.id ? 'rotate-180 text-[var(--valo-red)]' : ''}`}
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
                       </div>
                     </div>
                   </div>
 
                   {selectedJob?.id === job.id && (
-                    <JobDetails 
-                      job={job} 
-                      onApply={handleApplyJob} 
-                      onMarkApplied={(id) => handleMarkApplied(id)} 
-                      onUndo={(id) => handleUndo(id)}
-                      onDelete={handleDeleteClick}
-                      onAbort={handleAbortJob}
-                      isDeploying={deployingJobs.has(job.id)}
-                      isAborting={abortingJobs.has(job.id)}
-                      isMarkingComplete={markingCompleteJobs.has(job.id)}
-                    />
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <JobDetails 
+                        job={job} 
+                        onApply={handleApplyJob} 
+                        onMarkApplied={(id) => handleMarkApplied(id)} 
+                        onUndo={(id) => handleUndo(id)}
+                        onDelete={handleDeleteClick}
+                        onAbort={handleAbortJob}
+                        isDeploying={deployingJobs.has(job.id)}
+                        isAborting={abortingJobs.has(job.id)}
+                        isMarkingComplete={markingCompleteJobs.has(job.id)}
+                      />
+                    </motion.div>
                   )}
                 </motion.div>
               ))}

@@ -16,6 +16,8 @@
   --valo-gray-light: #374151;
   --valo-text: #ECE8E1;
   --valo-text-dim: #8A8F98;
+  --valo-purple: #A855F7;
+  --valo-white: #ECE8E1;
   
   --background: var(--valo-dark);
   --foreground: var(--valo-text);

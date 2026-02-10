@@ -3,8 +3,10 @@ from typing import Optional, Dict
 from pathlib import Path
 import asyncio
 import json
+import logging
+import os
 
-from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Query
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Query, Depends, Header
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -16,7 +18,36 @@ from src.utils.database import get_db
 from src.utils.config import get_settings
 from src.core.job import JobStatus, ApplicationType
 
-app = FastAPI(title="AutoApplier Dashboard", version="2.0.0")
+logger = logging.getLogger(__name__)
+
+# ============ Admin Auth ============
+ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "")
+
+
+def get_token_from_header(authorization: Optional[str] = Header(None)) -> Optional[str]:
+    """Extract Bearer token from Authorization header."""
+    if authorization and authorization.startswith("Bearer "):
+        return authorization[7:]
+    return None
+
+
+def require_admin(authorization: Optional[str] = Header(None)):
+    """Dependency that blocks unauthenticated users from write endpoints."""
+    if not ADMIN_TOKEN:
+        return  # No token configured = no auth required (dev mode)
+    token = get_token_from_header(authorization)
+    if token != ADMIN_TOKEN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+
+def is_admin(authorization: Optional[str] = Header(None)) -> bool:
+    """Check if current request is from admin (non-blocking)."""
+    if not ADMIN_TOKEN:
+        return True
+    token = get_token_from_header(authorization)
+    return token == ADMIN_TOKEN
+
+app = FastAPI(title="PaperPlane API", version="2.0.0")
 
 # Track running application tasks for abort functionality
 running_applications: Dict[str, dict] = {}  # job_id -> {"cancelled": bool, "started_at": datetime}
@@ -24,11 +55,30 @@ running_applications: Dict[str, dict] = {}  # job_id -> {"cancelled": bool, "sta
 # CORS for Next.js frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "https://paperplane.harsh.software"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ============ Auth Endpoints ============
+
+@app.post("/api/auth/verify")
+async def verify_token(authorization: Optional[str] = Header(None)):
+    """Verify if the provided token is valid."""
+    if not ADMIN_TOKEN:
+        return {"authenticated": True, "message": "No auth configured"}
+    token = get_token_from_header(authorization)
+    if token == ADMIN_TOKEN:
+        return {"authenticated": True}
+    raise HTTPException(status_code=403, detail="Invalid token")
+
+
+@app.get("/api/auth/status")
+async def auth_status():
+    """Check if auth is enabled (no token needed)."""
+    return {"auth_required": bool(ADMIN_TOKEN)}
 
 DASHBOARD_DIR = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=DASHBOARD_DIR / "static"), name="static")
@@ -268,8 +318,8 @@ async def get_stats():
     }
 
 
-@app.post("/api/jobs")
-@app.post("/api/jobs/")
+@app.post("/api/jobs", dependencies=[Depends(require_admin)])
+@app.post("/api/jobs/", dependencies=[Depends(require_admin)])
 async def create_job(job_in: JobCreate):
     db = get_db()
     from src.core.job import Job, JobSource, ApplicationType
@@ -382,7 +432,7 @@ async def get_job(job_id: str):
     return job.model_dump()
 
 
-@app.patch("/api/jobs/{job_id}")
+@app.patch("/api/jobs/{job_id}", dependencies=[Depends(require_admin)])
 async def update_job(job_id: str, update: JobUpdate):
     db = get_db()
     from src.utils.database import JobModel
@@ -405,7 +455,7 @@ async def update_job(job_id: str, update: JobUpdate):
     return {"success": True}
 
 
-@app.delete("/api/jobs/{job_id}")
+@app.delete("/api/jobs/{job_id}", dependencies=[Depends(require_admin)])
 async def delete_job(job_id: str):
     """Soft delete a job by marking it as REJECTED"""
     db = get_db()
@@ -470,7 +520,7 @@ SCRAPE_STATUS = {
 async def get_scrape_progress():
     return SCRAPE_STATUS
 
-@app.post("/api/scrape")
+@app.post("/api/scrape", dependencies=[Depends(require_admin)])
 async def trigger_scrape(request: ScrapeRequest, background_tasks: BackgroundTasks):
     if SCRAPE_STATUS["is_running"]:
         return {"status": "error", "message": "Scrape already in progress"}
@@ -550,9 +600,12 @@ async def get_llm_usage():
 
 
 @app.get("/api/profile")
-async def get_profile():
-    """Get agent profile - combines profile.json with SQLite preferences"""
+async def get_profile(authorization: Optional[str] = Header(None)):
+    """Get agent profile - combines profile.json with SQLite preferences.
+    Non-admin users get redacted profile data."""
     from src.utils.database import UserPreferencesModel
+    
+    admin = is_admin(authorization)
     
     profile_path = Path(__file__).parent.parent.parent.parent / "data" / "profile.json"
     
@@ -587,16 +640,32 @@ async def get_profile():
         
         personal = profile.get("personal", {})
         
-        return {
-            "agent_name": personal.get("first_name", "Agent").upper(),
-            "first_name": personal.get("first_name", "Agent"),
-            "last_name": personal.get("last_name", ""),
-            "full_name": personal.get("full_name", "Agent"),
-            "email": personal.get("email", ""),
-            "github": personal.get("github", ""),
-            "avatar": None,
-            "valorant_agent": valorant_agent,  # From SQLite
-        }
+        first_name = personal.get("first_name", "Agent")
+        last_name = personal.get("last_name", "")
+        
+        if admin:
+            return {
+                "agent_name": first_name.upper(),
+                "first_name": first_name,
+                "last_name": last_name,
+                "full_name": personal.get("full_name", "Agent"),
+                "email": personal.get("email", ""),
+                "github": personal.get("github", ""),
+                "avatar": None,
+                "valorant_agent": valorant_agent,
+            }
+        else:
+            # Redacted profile for public visitors
+            return {
+                "agent_name": first_name.upper(),
+                "first_name": first_name,
+                "last_name": last_name[0] + "." if last_name else "",
+                "full_name": f"{first_name} {last_name[0]}." if last_name else first_name,
+                "email": "",
+                "github": "",
+                "avatar": None,
+                "valorant_agent": valorant_agent,
+            }
     except Exception as e:
         return {"error": str(e)}
 
@@ -605,7 +674,7 @@ class ProfileUpdate(BaseModel):
     valorant_agent: Optional[str] = None
 
 
-@app.patch("/api/profile")
+@app.patch("/api/profile", dependencies=[Depends(require_admin)])
 async def update_profile(update: ProfileUpdate):
     """Update profile settings (valorant_agent) - stores in SQLite database"""
     from src.utils.database import UserPreferencesModel
@@ -756,7 +825,7 @@ async def get_combat_history():
         return {"history": history}
 
 
-@app.post("/api/apply/{job_id}")
+@app.post("/api/apply/{job_id}", dependencies=[Depends(require_admin)])
 async def trigger_apply(job_id: str, background_tasks: BackgroundTasks):
     """Trigger application for a specific job"""
     global running_applications
@@ -858,7 +927,7 @@ async def trigger_apply(job_id: str, background_tasks: BackgroundTasks):
     return {"status": "started", "job_id": job_id, "message": "Application process started"}
 
 
-@app.post("/api/apply/{job_id}/abort")
+@app.post("/api/apply/{job_id}/abort", dependencies=[Depends(require_admin)])
 async def abort_apply(job_id: str):
     """Abort an in-progress application"""
     global running_applications
@@ -900,7 +969,7 @@ async def get_apply_status(job_id: str):
     }
 
 
-@app.post("/api/run")
+@app.post("/api/run", dependencies=[Depends(require_admin)])
 async def trigger_auto_apply_run(background_tasks: BackgroundTasks):
     """Trigger the main auto-apply loop"""
     
@@ -925,6 +994,8 @@ class ContactCreate(BaseModel):
     company: str
     linkedin_url: Optional[str] = None
     persona: Optional[str] = "unknown"
+    job_id: Optional[str] = None
+    notes: Optional[str] = None
 
 class EmailCreate(BaseModel):
     contact_id: str
@@ -939,15 +1010,44 @@ class CampaignCreate(BaseModel):
     personas: Optional[list[str]] = None
 
 
+class ContactUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    title: Optional[str] = None
+    company: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    persona: Optional[str] = None
+    job_id: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class EmailUpdate(BaseModel):
+    subject: Optional[str] = None
+    body: Optional[str] = None
+    status: Optional[str] = None
+    scheduled_at: Optional[str] = None
+
+
+class RenderEmail(BaseModel):
+    contact_id: str
+    job_id: Optional[str] = None
+    template_id: Optional[str] = None
+
+
 @app.get("/api/contacts")
 async def list_contacts(
     company: Optional[str] = None,
+    search: Optional[str] = None,
+    persona: Optional[str] = None,
+    job_id: Optional[str] = None,
     limit: int = 100
 ):
-    """Get all contacts, optionally filtered by company"""
+    """Get all contacts with optional search and filters"""
     db = get_db()
     
-    if company:
+    if search or job_id or persona:
+        contacts = db.search_contacts(query=search, job_id=job_id, persona=persona, limit=limit)
+    elif company:
         contacts = db.get_contacts_for_company(company, limit)
     else:
         contacts = db.get_all_contacts(limit)
@@ -964,6 +1064,8 @@ async def list_contacts(
                 "linkedin_url": c.linkedin_url,
                 "persona": c.persona.value if hasattr(c.persona, 'value') else c.persona,
                 "source": c.source.value if hasattr(c.source, 'value') else c.source,
+                "job_id": c.job_id,
+                "notes": c.notes,
                 "created_at": c.created_at.isoformat() if c.created_at else None,
             }
             for c in contacts
@@ -971,7 +1073,7 @@ async def list_contacts(
     }
 
 
-@app.post("/api/contacts")
+@app.post("/api/contacts", dependencies=[Depends(require_admin)])
 async def create_contact(contact_in: ContactCreate):
     """Add a new contact manually"""
     from src.core.cold_email_models import Contact, ContactPersona, ContactSource
@@ -986,69 +1088,133 @@ async def create_contact(contact_in: ContactCreate):
         linkedin_url=contact_in.linkedin_url,
         persona=ContactPersona(contact_in.persona) if contact_in.persona else ContactPersona.UNKNOWN,
         source=ContactSource.MANUAL,
+        job_id=contact_in.job_id,
+        notes=contact_in.notes,
     )
     
     contact_id = db.add_contact(contact)
     return {"id": contact_id, "success": True}
 
 
-@app.post("/api/contacts/scrape")
-async def scrape_contacts(company: str, background_tasks: BackgroundTasks, limit: int = 10):
-    """Scrape contacts from Apollo for a company"""
+@app.patch("/api/contacts/{contact_id}", dependencies=[Depends(require_admin)])
+async def update_contact(contact_id: str, update: ContactUpdate):
+    """Update a contact"""
+    db = get_db()
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    success = db.update_contact_fields(contact_id, **update_data)
+    if not success:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    return {"success": True}
+
+
+@app.delete("/api/contacts/{contact_id}", dependencies=[Depends(require_admin)])
+async def delete_contact(contact_id: str):
+    """Delete a contact"""
+    db = get_db()
+    success = db.delete_contact(contact_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    return {"success": True}
+
+
+@app.post("/api/contacts/scrape", dependencies=[Depends(require_admin)])
+async def scrape_contacts(
+    company: Optional[str] = Query(None),
+    job_id: Optional[str] = Query(None),
+    limit: int = Query(10),
+    background_tasks: BackgroundTasks = BackgroundTasks()
+):
+    """Scrape contacts from Apollo for a company or job"""
+    if not company and not job_id:
+        raise HTTPException(status_code=400, detail="Either company or job_id must be provided")
     
     async def run_scrape():
         try:
             from src.scrapers.apollo_scraper import ApolloScraper
             
-            scraper = ApolloScraper()
-            contacts = await scraper.search_contacts(company=company, limit=limit)
-            
             db = get_db()
+            target_company = company
+            
+            # If job_id provided, get company from job
+            if job_id and not target_company:
+                job = db.get_job(job_id)
+                if not job:
+                    print(f"   ❌ Job {job_id} not found")
+                    return
+                target_company = job.company
+            
+            if not target_company:
+                print(f"   ❌ No company found to scrape")
+                return
+            
+            scraper = ApolloScraper()
+            contacts = await scraper.search_contacts(company=target_company, limit=limit)
+            
+            # Link contacts to job if job_id provided
+            if job_id:
+                for contact in contacts:
+                    contact.job_id = job_id
+            
             count = db.add_contacts_bulk(contacts)
-            print(f"   ✅ Scraped {count} contacts for {company}")
+            print(f"   ✅ Scraped {count} contacts for {target_company}" + (f" (linked to job {job_id})" if job_id else ""))
         except Exception as e:
             print(f"   ❌ Contact scrape error: {e}")
     
     background_tasks.add_task(run_scrape)
-    return {"status": "started", "message": f"Scraping contacts for {company}"}
+    return {"status": "started", "message": f"Scraping contacts for {company or 'job'}"}
 
 
 @app.get("/api/emails")
 async def list_emails(
     status: Optional[str] = None,
+    search: Optional[str] = None,
+    job_id: Optional[str] = None,
+    contact_id: Optional[str] = None,
     limit: int = 100
 ):
-    """Get all cold emails"""
-    from src.core.cold_email_models import EmailStatus
+    """Get all cold emails with enriched contact info"""
+    from src.core.cold_email_models import EmailStatus as ES
     
     db = get_db()
     
-    if status:
-        emails = db.get_cold_emails_by_status(EmailStatus(status), limit)
+    if search or job_id or contact_id:
+        emails = db.search_cold_emails(query=search, status=status, job_id=job_id, contact_id=contact_id, limit=limit)
+    elif status:
+        emails = db.get_cold_emails_by_status(ES(status), limit)
     else:
         emails = db.get_all_cold_emails(limit)
     
-    return {
-        "total": len(emails),
-        "emails": [
-            {
-                "id": e.id,
-                "contact_id": e.contact_id,
-                "job_id": e.job_id,
-                "subject": e.subject,
-                "body": e.body[:200] + "..." if len(e.body) > 200 else e.body,
-                "status": e.status.value if hasattr(e.status, 'value') else e.status,
-                "scheduled_at": e.scheduled_at.isoformat() if e.scheduled_at else None,
-                "sent_at": e.sent_at.isoformat() if e.sent_at else None,
-                "followup_number": e.followup_number,
-                "created_at": e.created_at.isoformat() if e.created_at else None,
-            }
-            for e in emails
-        ]
-    }
+    # Enrich with contact info
+    contact_cache: dict = {}
+    enriched = []
+    for e in emails:
+        if e.contact_id and e.contact_id not in contact_cache:
+            contact_cache[e.contact_id] = db.get_contact(e.contact_id)
+        contact = contact_cache.get(e.contact_id)
+        enriched.append({
+            "id": e.id,
+            "contact_id": e.contact_id,
+            "contact_name": contact.name if contact else "Unknown",
+            "contact_email": contact.email if contact else "",
+            "contact_company": contact.company if contact else "",
+            "job_id": e.job_id,
+            "template_id": e.template_id,
+            "subject": e.subject,
+            "body": e.body,
+            "status": e.status.value if hasattr(e.status, 'value') else e.status,
+            "scheduled_at": e.scheduled_at.isoformat() if e.scheduled_at else None,
+            "sent_at": e.sent_at.isoformat() if e.sent_at else None,
+            "followup_number": e.followup_number,
+            "created_at": e.created_at.isoformat() if e.created_at else None,
+            "error_message": e.error_message,
+        })
+    
+    return {"total": len(enriched), "emails": enriched}
 
 
-@app.post("/api/emails")
+@app.post("/api/emails", dependencies=[Depends(require_admin)])
 async def create_email(email_in: EmailCreate):
     """Create a new cold email"""
     from src.core.cold_email_models import ColdEmail, EmailStatus
@@ -1066,6 +1232,55 @@ async def create_email(email_in: EmailCreate):
     
     email_id = db.add_cold_email(email)
     return {"id": email_id, "success": True}
+
+
+@app.post("/api/emails/render", dependencies=[Depends(require_admin)])
+async def render_email_preview(data: RenderEmail):
+    """Render an email from template for preview (without saving)"""
+    try:
+        db = get_db()
+        contact = db.get_contact(data.contact_id)
+        if not contact:
+            raise HTTPException(status_code=404, detail="Contact not found")
+        
+        if not data.template_id:
+            return {"subject": "", "body": "", "template_name": None}
+        
+        from src.email.email_templates import TemplateManager, get_template_variables
+        from src.email.email_personalizer import EmailPersonalizer
+        
+        manager = TemplateManager()
+        template = manager.get_template(data.template_id)
+        if not template:
+            raise HTTPException(status_code=404, detail="Template not found")
+        
+        job = db.get_job(data.job_id) if data.job_id else None
+        
+        applicant = None
+        try:
+            from src.core.applicant import Applicant
+            root_dir = Path(__file__).parent.parent.parent.parent
+            profile_path = root_dir / "data" / "profile.json"
+            if not profile_path.exists():
+                profile_path = Path("data/profile.json")
+            if profile_path.exists():
+                applicant = Applicant.from_file(profile_path)
+        except Exception as e:
+            logger.warning(f"Could not load applicant profile: {e}")
+            pass
+        
+        variables = get_template_variables(contact, job, applicant)
+        personalizer = EmailPersonalizer()
+        variables["personalized_hook"] = personalizer._get_fallback_hook(contact)
+        
+        subject, body = manager.render_template(template, variables)
+        
+        return {"subject": subject, "body": body, "template_name": template.name}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error rendering email template: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to render template: {str(e)}")
 
 
 @app.get("/api/emails/{email_id}")
@@ -1090,7 +1305,41 @@ async def get_email(email_id: str):
     }
 
 
-@app.post("/api/emails/{email_id}/send")
+@app.patch("/api/emails/{email_id}", dependencies=[Depends(require_admin)])
+async def update_email(email_id: str, update: EmailUpdate):
+    """Update email fields (subject, body, status, scheduled_at)"""
+    db = get_db()
+    update_data: dict = {}
+    if update.subject is not None:
+        update_data["subject"] = update.subject
+    if update.body is not None:
+        update_data["body"] = update.body
+    if update.status is not None:
+        update_data["status"] = update.status
+    if update.scheduled_at is not None:
+        try:
+            update_data["scheduled_at"] = datetime.fromisoformat(update.scheduled_at)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format")
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    success = db.update_cold_email_fields(email_id, **update_data)
+    if not success:
+        raise HTTPException(status_code=404, detail="Email not found")
+    return {"success": True}
+
+
+@app.delete("/api/emails/{email_id}", dependencies=[Depends(require_admin)])
+async def delete_email(email_id: str):
+    """Delete a cold email"""
+    db = get_db()
+    success = db.delete_cold_email(email_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Email not found")
+    return {"success": True}
+
+
+@app.post("/api/emails/{email_id}/send", dependencies=[Depends(require_admin)])
 async def send_email_now(email_id: str, background_tasks: BackgroundTasks):
     """Send a specific email immediately"""
     
@@ -1107,7 +1356,7 @@ async def send_email_now(email_id: str, background_tasks: BackgroundTasks):
     return {"status": "sending", "email_id": email_id}
 
 
-@app.post("/api/emails/{email_id}/schedule")
+@app.post("/api/emails/{email_id}/schedule", dependencies=[Depends(require_admin)])
 async def schedule_email(email_id: str):
     """Schedule an email for optimal delivery time"""
     from src.email.email_scheduler import EmailScheduler
@@ -1177,7 +1426,7 @@ async def get_template(template_id: str):
     }
 
 
-@app.post("/api/campaigns")
+@app.post("/api/campaigns", dependencies=[Depends(require_admin)])
 async def create_campaign(campaign_in: CampaignCreate, background_tasks: BackgroundTasks):
     """Create a cold email campaign for a job"""
     
@@ -1228,7 +1477,7 @@ async def get_email_stats():
     }
 
 
-@app.post("/api/emails/process")
+@app.post("/api/emails/process", dependencies=[Depends(require_admin)])
 async def process_scheduled_emails(background_tasks: BackgroundTasks):
     """Process all scheduled emails that are due"""
     
@@ -1254,7 +1503,7 @@ async def emails_page(request: Request):
 
 def run_dashboard(host: str = "127.0.0.1", port: int = 8080):
     import uvicorn
-    print(f"\n🚀 Starting AutoApplier Dashboard at http://{host}:{port}\n")
+    print(f"\n🚀 Starting PaperPlane API at http://{host}:{port}\n")
     uvicorn.run(app, host=host, port=port)
 
 

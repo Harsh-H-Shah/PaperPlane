@@ -169,7 +169,7 @@ class JobrightScraper(BaseScraper):
         async with httpx.AsyncClient() as client:
             headers = {
                 "Accept": "application/vnd.github.v3.raw",
-                "User-Agent": "AutoApplier/1.0"
+                "User-Agent": "PaperPlane/1.0"
             }
             response = await client.get(self.GITHUB_API, headers=headers, timeout=30)
             

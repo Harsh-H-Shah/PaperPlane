@@ -7,6 +7,7 @@ from sqlalchemy import (
     create_engine, Column, String, Integer, Float, Boolean, DateTime, Text, JSON, Enum as SQLEnum,
 )
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
+from sqlalchemy.exc import DatabaseError as SQLAlchemyDatabaseError
 
 from src.core.job import Job, JobStatus, JobSource, ApplicationType
 from src.core.application import Application, ApplicationStatus
@@ -292,14 +293,43 @@ class Database:
     def __init__(self, db_path: str = "data/applications.db", echo: bool = False):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        self.engine = create_engine(
+        self._echo = echo
+        self.engine, self.SessionLocal = self._create_engine_and_session()
+
+    def _create_engine_and_session(self):
+        engine = create_engine(
             f"sqlite:///{self.db_path}",
-            echo=echo,
+            echo=self._echo,
             connect_args={"check_same_thread": False}
         )
-        self.SessionLocal = sessionmaker(bind=self.engine)
-        Base.metadata.create_all(self.engine)
+        session_factory = sessionmaker(bind=engine)
+        try:
+            Base.metadata.create_all(engine)
+        except SQLAlchemyDatabaseError as e:
+            orig = str(e.orig) if getattr(e, "orig", None) else str(e)
+            if "malformed" in orig.lower() or "disk image" in orig.lower():
+                engine.dispose()
+                if self.db_path.exists():
+                    backup_path = self.db_path.with_suffix(self.db_path.suffix + ".corrupted")
+                    try:
+                        self.db_path.rename(backup_path)
+                    except OSError:
+                        try:
+                            import shutil
+                            shutil.copy(self.db_path, backup_path)
+                            self.db_path.unlink()
+                        except Exception:
+                            self.db_path.unlink(missing_ok=True)
+                engine = create_engine(
+                    f"sqlite:///{self.db_path}",
+                    echo=self._echo,
+                    connect_args={"check_same_thread": False}
+                )
+                session_factory = sessionmaker(bind=engine)
+                Base.metadata.create_all(engine)
+            else:
+                raise
+        return engine, session_factory
     
     @contextmanager
     def session(self) -> Session:
@@ -613,6 +643,17 @@ class Database:
             ).all()
             return [m.to_template() for m in models]
     
+    def delete_template(self, template_id: str) -> bool:
+        """Delete a template by ID"""
+        with self.session() as session:
+            model = session.query(EmailTemplateModel).filter(
+                EmailTemplateModel.id == template_id
+            ).first()
+            if model:
+                session.delete(model)
+                return True
+            return False
+    
     def add_cold_email(self, email: ColdEmail) -> str:
         """Add a cold email to queue"""
         email_id = email.id or f"email_{int(datetime.now().timestamp())}"
@@ -703,6 +744,77 @@ class Database:
                 "open_rate": (opened / sent * 100) if sent > 0 else 0,
                 "reply_rate": (replied / sent * 100) if sent > 0 else 0,
             }
+
+    def search_contacts(self, query: str = None, job_id: str = None, persona: str = None, limit: int = 100) -> list[Contact]:
+        """Search contacts with optional filters"""
+        from sqlalchemy import or_
+        with self.session() as session:
+            q = session.query(ContactModel)
+            if query:
+                t = f"%{query}%"
+                q = q.filter(or_(ContactModel.name.ilike(t), ContactModel.email.ilike(t), ContactModel.company.ilike(t), ContactModel.title.ilike(t)))
+            if job_id:
+                q = q.filter(ContactModel.job_id == job_id)
+            if persona:
+                q = q.filter(ContactModel.persona == persona)
+            return [m.to_contact() for m in q.order_by(ContactModel.created_at.desc()).limit(limit).all()]
+
+    def update_contact_fields(self, contact_id: str, **kwargs) -> bool:
+        """Update specific fields on a contact"""
+        with self.session() as session:
+            model = session.query(ContactModel).filter(ContactModel.id == contact_id).first()
+            if not model:
+                return False
+            for k, v in kwargs.items():
+                if hasattr(model, k) and v is not None:
+                    setattr(model, k, v)
+            return True
+
+    def delete_contact(self, contact_id: str) -> bool:
+        """Delete a contact"""
+        with self.session() as session:
+            model = session.query(ContactModel).filter(ContactModel.id == contact_id).first()
+            if model:
+                session.delete(model)
+                return True
+            return False
+
+    def search_cold_emails(self, query: str = None, status: str = None, job_id: str = None, contact_id: str = None, limit: int = 100) -> list[ColdEmail]:
+        """Search cold emails with optional filters"""
+        from sqlalchemy import or_
+        with self.session() as session:
+            q = session.query(ColdEmailModel)
+            if query:
+                t = f"%{query}%"
+                q = q.filter(or_(ColdEmailModel.subject.ilike(t), ColdEmailModel.body.ilike(t)))
+            if status:
+                q = q.filter(ColdEmailModel.status == status)
+            if job_id:
+                q = q.filter(ColdEmailModel.job_id == job_id)
+            if contact_id:
+                q = q.filter(ColdEmailModel.contact_id == contact_id)
+            return [m.to_cold_email() for m in q.order_by(ColdEmailModel.created_at.desc()).limit(limit).all()]
+
+    def update_cold_email_fields(self, email_id: str, **kwargs) -> bool:
+        """Update specific fields on a cold email"""
+        with self.session() as session:
+            model = session.query(ColdEmailModel).filter(ColdEmailModel.id == email_id).first()
+            if not model:
+                return False
+            for k, v in kwargs.items():
+                if hasattr(model, k) and v is not None:
+                    setattr(model, k, v)
+            return True
+
+    def delete_cold_email(self, email_id: str) -> bool:
+        """Delete a cold email"""
+        with self.session() as session:
+            model = session.query(ColdEmailModel).filter(ColdEmailModel.id == email_id).first()
+            if model:
+                session.delete(model)
+                return True
+            return False
+
 
 # Database singleton
 _db: Optional[Database] = None

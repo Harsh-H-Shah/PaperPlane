@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/lib/auth';
 
 interface QuickActionsProps {
   onScrape: () => void;
@@ -27,6 +28,7 @@ export default function QuickActions({
   scrapeProgress,
   applyProgress 
 }: QuickActionsProps) {
+  const { isAdmin } = useAuth();
   const [showConfirmApply, setShowConfirmApply] = useState(false);
   const [pulseEffect, setPulseEffect] = useState(false);
 
@@ -59,13 +61,15 @@ export default function QuickActions({
           {/* Scan Jobs Button */}
           <button
             onClick={onScrape}
-            disabled={isScraping || isApplying}
+            disabled={isScraping || isApplying || !isAdmin}
             className={`relative p-8 rounded-lg transition-all duration-300 flex flex-col items-center text-center overflow-hidden group tech-button ${
-              isScraping 
-                ? 'bg-[var(--valo-cyan)]/20 border-2 border-[var(--valo-cyan)]' 
-                : isScraping || isApplying
-                  ? 'bg-[var(--valo-gray-light)] cursor-not-allowed opacity-50'
-                  : 'bg-[var(--valo-dark)] hover:bg-[var(--valo-cyan)]/10 hover:border-[var(--valo-cyan)]'
+              !isAdmin
+                ? 'bg-[var(--valo-gray-light)] cursor-not-allowed opacity-60'
+                : isScraping 
+                  ? 'bg-[var(--valo-cyan)]/20 border-2 border-[var(--valo-cyan)]' 
+                  : isScraping || isApplying
+                    ? 'bg-[var(--valo-gray-light)] cursor-not-allowed opacity-50'
+                    : 'bg-[var(--valo-dark)] hover:bg-[var(--valo-cyan)]/10 hover:border-[var(--valo-cyan)]'
             }`}
           >
             {isScraping && (
@@ -83,20 +87,22 @@ export default function QuickActions({
               {isScraping ? 'SCANNING...' : 'RECON'}
             </span>
             <span className="text-xs text-[var(--valo-text-dim)] uppercase tracking-wider mt-2 group-hover:text-[var(--valo-text)]">
-              Identify Targets
+              {!isAdmin ? '🔒 Admin Only' : 'Identify Targets'}
             </span>
           </button>
 
           {/* Auto Apply Button */}
           <button
             onClick={() => setShowConfirmApply(true)}
-            disabled={isScraping || isApplying}
+            disabled={isScraping || isApplying || !isAdmin}
             className={`relative p-8 rounded-lg transition-all duration-300 flex flex-col items-center text-center overflow-hidden group tech-button ${
-              isApplying 
-                ? 'bg-[var(--valo-green)]/20 border-2 border-[var(--valo-green)]' 
-                : isScraping || isApplying
-                  ? 'bg-[var(--valo-gray-light)] cursor-not-allowed opacity-50'
-                  : 'bg-[var(--valo-dark)] hover:bg-[var(--valo-green)]/10 hover:border-[var(--valo-green)]'
+              !isAdmin
+                ? 'bg-[var(--valo-gray-light)] cursor-not-allowed opacity-60'
+                : isApplying 
+                  ? 'bg-[var(--valo-green)]/20 border-2 border-[var(--valo-green)]' 
+                  : isScraping || isApplying
+                    ? 'bg-[var(--valo-gray-light)] cursor-not-allowed opacity-50'
+                    : 'bg-[var(--valo-dark)] hover:bg-[var(--valo-green)]/10 hover:border-[var(--valo-green)]'
             }`}
           >
             {isApplying && (
@@ -114,7 +120,7 @@ export default function QuickActions({
               {isApplying ? 'DEPLOYING...' : 'ENGAGE'}
             </span>
             <span className="text-xs text-[var(--valo-text-dim)] uppercase tracking-wider mt-2 group-hover:text-[var(--valo-text)]">
-              Execute Protocols
+              {!isAdmin ? '🔒 Admin Only' : 'Execute Protocols'}
             </span>
           </button>
         </div>

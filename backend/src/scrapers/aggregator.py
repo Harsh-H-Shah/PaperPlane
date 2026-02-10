@@ -14,6 +14,7 @@ from src.scrapers.greenhouse_jobs import GreenhouseJobsScraper
 from src.scrapers.google_jobs import GoogleJobsScraper
 from src.scrapers.glassdoor import GlassdoorScraper
 from src.scrapers.levelsfyi import LevelsfyiScraper
+from src.scrapers.duckduckgo_search import DuckDuckGoScraper
 from src.core.job import Job
 from src.utils.config import get_settings
 from src.utils.database import get_db
@@ -49,6 +50,13 @@ class JobAggregator:
         self.scrapers.append(GoogleJobsScraper())
         self.scrapers.append(GlassdoorScraper())
         self.scrapers.append(LevelsfyiScraper())
+        
+        # Free semantic search scraper (no API key needed)
+        try:
+            self.scrapers.append(DuckDuckGoScraper())
+        except ImportError:
+            # DuckDuckGo scraper not available (missing dependency)
+            pass
     
     async def scrape_all(self, keywords: list[str] = None, location: str = None, limit_per_source: int = 100) -> dict:
         keywords = keywords or self.settings.search.titles
@@ -142,6 +150,8 @@ class JobAggregator:
             "glassdoor": GlassdoorScraper,
             "levelsfyi": LevelsfyiScraper,
             "levels": LevelsfyiScraper,
+            "duckduckgo": DuckDuckGoScraper,
+            "ddg": DuckDuckGoScraper,
         }
         
         scraper_class = scraper_map.get(source_lower)

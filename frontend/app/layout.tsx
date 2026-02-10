@@ -7,8 +7,8 @@ const teko = Teko({ subsets: ["latin"], weight: ["300", "400", "500", "600", "70
 const rajdhani = Rajdhani({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-rajdhani" });
 
 export const metadata: Metadata = {
-  title: "PROTOCOL: HUNT | AutoApplier",
-  description: "Tactical Job Application Dashboard",
+  title: "PaperPlane | Automated Job Applications",
+  description: "Intelligent automated job application system",
 };
 
 export default function RootLayout({
