@@ -3,7 +3,7 @@ from typing import Optional, Dict
 from pathlib import Path
 import asyncio
 import json
-import logging
+
 import os
 
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Query, Depends, Header
@@ -554,7 +554,7 @@ async def trigger_scrape(request: ScrapeRequest, background_tasks: BackgroundTas
                     logger.info(f"✅ {source} -> found={raw_count}, new={len(jobs)}")
                 except Exception as e:
                     error_msg = f"{source}: {str(e)}"
-                    tb = traceback.format_exc()
+
                     logger.error(f"Scrape error {error_msg}")
                     SCRAPE_STATUS["errors"].append(error_msg)
             
