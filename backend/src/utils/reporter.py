@@ -1,5 +1,5 @@
 from pathlib import Path
-from src.utils.database import get_db, ApplicationStatus
+from src.utils.database import get_db
 import base64
 
 class ActivityReporter:

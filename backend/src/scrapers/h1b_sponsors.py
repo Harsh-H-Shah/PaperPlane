@@ -1,5 +1,5 @@
 import httpx
-import re
+
 from typing import Optional
 from bs4 import BeautifulSoup
 from dataclasses import dataclass

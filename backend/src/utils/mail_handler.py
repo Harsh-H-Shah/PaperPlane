@@ -2,7 +2,7 @@ import imaplib
 import email
 import re
 from email.header import decode_header
-from datetime import datetime, timedelta
+
 from typing import Optional
 
 from src.utils.config import get_settings
@@ -89,7 +89,8 @@ class MailHandler:
                                 break
                             elif content_type == "text/html" and "attachment" not in content_disposition and not body:
                                 body = part.get_payload(decode=True).decode()
-                        except: pass
+                        except Exception:
+                            pass
                 else:
                     body = msg.get_payload(decode=True).decode()
 

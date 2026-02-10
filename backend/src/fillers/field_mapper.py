@@ -245,17 +245,20 @@ Skills: {self.applicant.get_skills_string(30)}
         if "country" in label_lower:
             target = self.applicant.address.country
             match = self._best_match(options, target)
-            if match: return match
+            if match:
+                return match
         
         if "state" in label_lower or "province" in label_lower:
             target = self.applicant.address.state
             match = self._best_match(options, target)
-            if match: return match
+            if match:
+                return match
         
         if "gender" in label_lower:
             target = self.applicant.demographics.gender
             match = self._best_match(options, target)
-            if match: return match
+            if match:
+                return match
 
         if "disability" in label_lower:
             target = self.applicant.demographics.disability_status.lower()

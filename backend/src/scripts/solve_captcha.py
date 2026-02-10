@@ -8,8 +8,8 @@ project_root = str(Path(__file__).resolve().parent.parent.parent)
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-from src.utils.browser import BrowserManager
-from src.utils.config import get_settings
+from src.utils.browser import BrowserManager  # noqa: E402
+from src.utils.config import get_settings  # noqa: E402
 
 async def main():
     print("🚀 Starting Manual CAPTCHA Solver...")

@@ -4,7 +4,7 @@ from typing import Optional
 from contextlib import contextmanager
 
 from sqlalchemy import (
-    create_engine, Column, String, Integer, Float, Boolean, DateTime, Text, JSON, Enum as SQLEnum,
+    create_engine, Column, String, Integer, Float, Boolean, DateTime, Text, JSON,
 )
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from sqlalchemy.exc import DatabaseError as SQLAlchemyDatabaseError
@@ -368,8 +368,7 @@ class Database:
             job_model = session.query(JobModel).filter(JobModel.id == job_id).first()
             return job_model.to_job() if job_model else None
     
-            job_model = session.query(JobModel).filter(JobModel.url == url).first()
-            return job_model.to_job() if job_model else None
+
     
     def filter_existing_urls(self, urls: list[str]) -> set[str]:
         if not urls:
@@ -414,7 +413,7 @@ class Database:
         
         # Prepare candidates for query
         # We check against jobs from last 7 days to keep query efficient
-        cutoff_date = datetime.now().strftime("%Y-%m-%d")
+        # cutoff_date = datetime.now().strftime("%Y-%m-%d")
         
         # We need to check one by one or construct a complex OR query.
         # A complex OR query is better: (title=t1 AND company=c1) OR (title=t2 AND company=c2)...
@@ -639,7 +638,7 @@ class Database:
         with self.session() as session:
             models = session.query(EmailTemplateModel).filter(
                 (EmailTemplateModel.persona_type == persona.value) |
-                (EmailTemplateModel.persona_type == None)
+                (EmailTemplateModel.persona_type.is_(None))
             ).all()
             return [m.to_template() for m in models]
     

@@ -2,7 +2,6 @@
 Email Personalizer - Uses Gemini AI to generate personalized email hooks.
 Creates context-aware openers based on recipient role, company, and job.
 """
-from typing import Optional
 
 from src.core.cold_email_models import Contact, ContactPersona
 from src.llm.gemini import GeminiClient

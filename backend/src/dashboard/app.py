@@ -8,7 +8,7 @@ import os
 
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Query, Depends, Header
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -186,7 +186,7 @@ def calculate_streak(db) -> int:
             except ValueError:
                 continue
                 
-            expected = today - timedelta(days=i)
+            # expected = today - timedelta(days=i)
             
             # If the most recent application was NOT today, check if it was yesterday
             # If i==0 and date is yesterday, streak is kept (but not incremented for today if we haven't applied today)
@@ -322,7 +322,7 @@ async def get_stats():
 @app.post("/api/jobs/", dependencies=[Depends(require_admin)])
 async def create_job(job_in: JobCreate):
     db = get_db()
-    from src.core.job import Job, JobSource, ApplicationType
+    from src.core.job import Job, JobSource
     import uuid
     
     print(f"DEBUG: Manual job creation request for: {job_in.title} at {job_in.company}")
@@ -574,7 +574,7 @@ async def get_activity_log(lines: int = 50):
         with open(log_path, "r") as f:
             all_lines = f.readlines()
             # Filter empty lines
-            all_lines = [l.strip() for l in all_lines if l.strip()]
+            all_lines = [line.strip() for line in all_lines if line.strip()]
             return {"logs": all_lines[-lines:]}
     except Exception as e:
         return {"logs": [f"Error reading log: {str(e)}"]}
@@ -1146,7 +1146,7 @@ async def scrape_contacts(
                 target_company = job.company
             
             if not target_company:
-                print(f"   ❌ No company found to scrape")
+                print("   ❌ No company found to scrape")
                 return
             
             scraper = ApolloScraper()

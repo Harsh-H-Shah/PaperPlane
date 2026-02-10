@@ -1,12 +1,9 @@
-from typing import Optional, List
 from playwright.async_api import Page
 import asyncio
 
-from src.core.applicant import Applicant
 from src.core.application import Application
 from src.core.job import Job
 from src.fillers.base_filler import BaseFiller
-from src.llm.gemini import GeminiClient
 
 class AshbyFiller(BaseFiller):
     PLATFORM_NAME = "Ashby"
@@ -38,7 +35,7 @@ class AshbyFiller(BaseFiller):
                 if await frame.locator("a[href*='ashbyhq.com']").count() > 0 or \
                    await frame.locator("div[class*='ashby'], div[class*='_container_']").count() > 0:
                     return True
-            except:
+            except Exception:
                 continue
             
         return False
@@ -63,11 +60,12 @@ class AshbyFiller(BaseFiller):
                     try:
                         await page.wait_for_selector(self.SELECTORS["name"], timeout=5000)
                         print("   ✅ Form revealed")
-                    except:
+                    except Exception:
                         print("   ⚠️ Form fields didn't appear after click. Trying to wait for URL...")
                         try:
                             await page.wait_for_url(lambda u: "application" in u, timeout=3000)
-                        except: pass
+                        except Exception:
+                            pass
                 else:
                     print("   ℹ️ No 'Apply' button found, assuming we might be on form or it's slow...")
             
@@ -122,7 +120,8 @@ class AshbyFiller(BaseFiller):
         except Exception as e:
             try:
                 await page.screenshot(path="debug_ashby_error.png")
-            except: pass
+            except Exception:
+                pass
             print(f"DEBUG: Ashby Fill Error: {e}")
             import traceback
             traceback.print_exc()
@@ -137,7 +136,7 @@ class AshbyFiller(BaseFiller):
         if await system_name.count() > 0:
             await system_name.fill(self.applicant.full_name)
             name_filled = True
-            print(f"      ✅ Filled Name via System ID")
+            print("      ✅ Filled Name via System ID")
 
         # Strategy B: Full Name Field (General)
         if not name_filled:
@@ -187,7 +186,7 @@ class AshbyFiller(BaseFiller):
         if await system_email.count() > 0:
             await system_email.fill(self.applicant.email)
             email_filled = True
-            print(f"      ✅ Filled Email via System ID")
+            print("      ✅ Filled Email via System ID")
             
         if not email_filled:
             email_sel = self.SELECTORS["email"] + ", input[type='email'], input[placeholder*='email']"
@@ -252,7 +251,7 @@ class AshbyFiller(BaseFiller):
         if await file_input.count() > 0:
             try:
                 await file_input.set_input_files(resume_path)
-                print(f"   ✅ Resume uploaded via primary selector")
+                print("   ✅ Resume uploaded via primary selector")
                 return True
             except Exception as e:
                 print(f"   ❌ Resume upload failed: {e}")
@@ -265,7 +264,8 @@ class AshbyFiller(BaseFiller):
                 await all_file_inputs.nth(i).set_input_files(resume_path)
                 print(f"   ✅ Resume uploaded via fallback file input #{i}")
                 return True
-            except: continue
+            except Exception:
+                continue
             
         print("   ❌ No file input found for resume upload")
         return False
@@ -315,7 +315,8 @@ class AshbyFiller(BaseFiller):
                 continue
                 
             question_text = await label_el.text_content()
-            if not question_text: continue
+            if not question_text:
+                continue
             question_text = question_text.strip()
             
             if self._should_skip_question(question_text):
@@ -346,7 +347,8 @@ class AshbyFiller(BaseFiller):
             if input_id in handled_inputs:
                 print(f"   ⏩ Skipping already handled input: {input_id}")
                 continue
-            if input_id: handled_inputs.add(input_id)
+            if input_id:
+                handled_inputs.add(input_id)
 
             # 1. Dropdowns (Select or custom)
             if tag_name == "select" or (await block.locator("div[class*='select']").count() > 0):
@@ -359,7 +361,8 @@ class AshbyFiller(BaseFiller):
                 inner_inputs = await block.locator(f"input[type='{input_type}']").all()
                 for inp in inner_inputs:
                     iid = await inp.get_attribute("id") or await inp.get_attribute("name")
-                    if iid: handled_inputs.add(iid)
+                    if iid:
+                        handled_inputs.add(iid)
                 # Check if this is a GROUP (multiple options) or Single
                 all_inputs = block.locator(f"input[type='{input_type}']")
                 if await all_inputs.count() > 1:
@@ -448,7 +451,7 @@ class AshbyFiller(BaseFiller):
              
              # Locate options (usually in a portal at root)
              # Ashby options often have class containing 'option'
-             options_locator = self.applicant.page_locator("div[id*='react-select'], div[class*='option']") 
+             # options_locator was unused 
              # Wait, we need page reference. 
              # We can use block.page
              page = block.page
@@ -686,7 +689,7 @@ class AshbyFiller(BaseFiller):
         
         # Strategy 2: JavaScript click on label
         try:
-            print(f"   🔧 Trying JS click...")
+            print("   🔧 Trying JS click...")
             await click_target.evaluate("el => el.click()")
             await asyncio.sleep(0.2)
             
@@ -715,7 +718,7 @@ class AshbyFiller(BaseFiller):
 
     async def _handle_textarea(self, element, question: str, job: Job, application: Application) -> None:
          # Similar to Greenhouse
-        common_answer = self.applicant.get_answer("", company=job.company, position=job.title) # Key mapping needed?
+         # common_answer was unused
         # Use simple mapping for now
         if "cover letter" in question.lower():
              # Check if we have cover letter content
@@ -758,14 +761,16 @@ class AshbyFiller(BaseFiller):
         
         for i in range(count):
             block = question_blocks.nth(i)
-            if not await block.is_visible(): continue
+            if not await block.is_visible():
+                continue
             
             label_el = block.locator("label").first
             q_text = await label_el.text_content()
             q_text = q_text.strip() if q_text else ""
             
             # Skip if we shouldn't answer
-            if self._should_skip_question(q_text): continue
+            if self._should_skip_question(q_text):
+                continue
             
             # Check status
             is_filled = False
@@ -945,7 +950,8 @@ class AshbyFiller(BaseFiller):
         # Ported from GreenhouseFiller
         # 1. Determine value
         value = self.field_mapper.get_value(question)
-        if not value: return False
+        if not value:
+            return False
         
         print(f"DEBUG: Handling Autocomplete for '{question}' with '{value}'")
         
@@ -1004,7 +1010,7 @@ class AshbyFiller(BaseFiller):
             val_in_field = await field.input_value()
             if not val_in_field or len(val_in_field) < 2:
                  print(f"   ☢️ Autocomplete failed via typing... attempting JS Injection for '{value}'")
-                 success = await field.page.evaluate("""(data) => {
+                 await field.page.evaluate("""(data) => {
                     const input = document.querySelector(data.selector);
                     if (!input) return false;
                     
@@ -1107,7 +1113,8 @@ class AshbyFiller(BaseFiller):
                      nearby_input = parent.locator("input")
                      if await nearby_input.count() > 0:
                          input_el = nearby_input.first
-                 except: pass
+                 except Exception:
+                     pass
                  
              await self._click_radio_option(
                  click_target=target_el,

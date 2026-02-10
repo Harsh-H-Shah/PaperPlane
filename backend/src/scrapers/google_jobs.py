@@ -2,17 +2,14 @@
 Google Jobs Scraper - Enhanced version for maximum job discovery
 Scrapes job listings from Google's job search using multiple strategies.
 """
-import httpx
 import re
 import json
-import asyncio
 from typing import Optional
-from datetime import datetime
 from bs4 import BeautifulSoup
 
 from src.scrapers.base_scraper import BaseScraper
 from src.scrapers.scraper_utils import parse_date_string
-from src.core.job import Job, JobSource, ApplicationType
+from src.core.job import Job, JobSource
 from src.classifiers.detector import detect_application_type
 
 
@@ -43,7 +40,7 @@ class GoogleJobsScraper(BaseScraper):
         queries = keywords or self.get_search_keywords()
         location = location or "United States"
         
-        print(f"   🔄 GoogleJobs: Switch to Playwright (Browser) scraping...")
+        print("   🔄 GoogleJobs: Switch to Playwright (Browser) scraping...")
         
         try:
             async with browser_session() as (manager, page):
@@ -63,7 +60,7 @@ class GoogleJobsScraper(BaseScraper):
                         
                         # Debug: Take screenshot
                         await manager.take_screenshot(page, "debug_google_jobs")
-                        print(f"      📸 Debug screenshot saved to data/screenshots/debug_google_jobs.png")
+                        print("      📸 Debug screenshot saved to data/screenshots/debug_google_jobs.png")
                         
                         # Debug: Save HTML
                         html = await page.content()
@@ -171,7 +168,7 @@ class GoogleJobsScraper(BaseScraper):
                             job = self._parse_embedded_job(item)
                             if job:
                                 jobs.append(job)
-                except:
+                except Exception:
                     continue
         
         return jobs

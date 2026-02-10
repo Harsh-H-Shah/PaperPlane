@@ -1,6 +1,5 @@
 import asyncio
-from typing import Optional
-from datetime import datetime
+
 
 from src.scrapers.base_scraper import BaseScraper
 from src.scrapers.simplify import SimplifyScraper

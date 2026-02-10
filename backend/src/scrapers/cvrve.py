@@ -1,10 +1,10 @@
 import httpx
 from typing import Optional
 from datetime import datetime
-import re
+
 
 from src.scrapers.base_scraper import BaseScraper
-from src.core.job import Job, JobSource, ApplicationType
+from src.core.job import Job, JobSource
 from src.classifiers.detector import detect_application_type
 
 
@@ -89,10 +89,10 @@ class CVRVEScraper(BaseScraper):
             if date_str:
                 try:
                     posted_date = datetime.strptime(date_str, "%Y-%m-%d")
-                except:
+                except ValueError:
                     try:
                         posted_date = datetime.strptime(date_str, "%m/%d/%Y")
-                    except:
+                    except Exception:
                         pass
             
             return Job(

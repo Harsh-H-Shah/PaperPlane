@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from typing import Optional
-from pydantic import BaseModel, Field, EmailStr, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class Address(BaseModel):

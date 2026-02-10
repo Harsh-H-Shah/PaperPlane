@@ -15,12 +15,12 @@ import os
 import re
 import json
 from typing import Optional
-from datetime import datetime
+
 from bs4 import BeautifulSoup
 
 from src.scrapers.base_scraper import BaseScraper
 from src.scrapers.scraper_utils import parse_date_string
-from src.core.job import Job, JobSource, ApplicationType
+from src.core.job import Job, JobSource
 from src.classifiers.detector import detect_application_type
 
 
@@ -73,7 +73,7 @@ class GlassdoorScraper(BaseScraper):
         keywords = keywords or self.get_search_keywords()
         location = location or "United States"
         
-        print(f"   🔄 Glassdoor: Switch to Playwright (Browser) scraping to bypass WAF...")
+        print("   🔄 Glassdoor: Switch to Playwright (Browser) scraping to bypass WAF...")
         
         try:
             async with browser_session() as (manager, page):
@@ -204,7 +204,7 @@ class GlassdoorScraper(BaseScraper):
                     
         except Exception as e:
             if "403" in str(e) or "401" in str(e):
-                print(f"   ⚠️ Glassdoor: Authentication required. Please update cookies.")
+                print("   ⚠️ Glassdoor: Authentication required. Please update cookies.")
         
         return jobs
     

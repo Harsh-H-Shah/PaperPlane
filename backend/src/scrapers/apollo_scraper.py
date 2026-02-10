@@ -6,7 +6,7 @@ import os
 import re
 import json
 import httpx
-import asyncio
+
 from typing import Optional
 from datetime import datetime
 from bs4 import BeautifulSoup
@@ -91,13 +91,13 @@ class ApolloScraper:
     ) -> list[Contact]:
         """Search for contacts at a company"""
         if not self.enabled:
-            print(f"   ⚠️ Apollo: Not enabled (no API key or cookies)")
+            print("   ⚠️ Apollo: Not enabled (no API key or cookies)")
             return []
         
         if self.use_api_key:
-            print(f"   🔑 Using Apollo API key authentication")
+            print("   🔑 Using Apollo API key authentication")
         else:
-            print(f"   🍪 Using Apollo cookie authentication")
+            print("   🍪 Using Apollo cookie authentication")
         
         contacts = []
         personas = personas or [
@@ -118,7 +118,7 @@ class ApolloScraper:
                 
                 if not contacts and not self.use_api_key:
                     # Fallback to web scraping (only if using cookies)
-                    print(f"   🌐 Falling back to web scraping...")
+                    print("   🌐 Falling back to web scraping...")
                     web_contacts = await self._search_via_web(client, company, limit)
                     contacts.extend([c for c in web_contacts if c.persona in personas])
                     
@@ -143,7 +143,7 @@ class ApolloScraper:
             if self.use_api_key:
                 # Use official Apollo API with API key
                 # Apollo API uses query parameters, not JSON body
-                from urllib.parse import urlencode, quote
+                from urllib.parse import quote
                 
                 # Build title keywords for search
                 title_keywords = []
@@ -153,7 +153,7 @@ class ApolloScraper:
                 # Build query parameters - Apollo expects person_titles[]=value1&person_titles[]=value2 format
                 query_parts = []
                 query_parts.append(f"per_page={min(limit, 100)}")
-                query_parts.append(f"page=1")
+                query_parts.append("page=1")
                 query_parts.append(f"q_organization_name={quote(company)}")
                 
                 # Add person_titles as array parameters
@@ -207,10 +207,10 @@ class ApolloScraper:
                     
                     print(f"      Apollo API: Successfully enriched {enriched_count}/{min(len(people), enrich_limit)} people")
                 elif response.status_code == 401:
-                    print(f"      Apollo API error: Unauthorized (401) - Check your API key")
+                    print("      Apollo API error: Unauthorized (401) - Check your API key")
                     print(f"      Response: {response.text[:300]}")
                 elif response.status_code == 403:
-                    print(f"      Apollo API error: Forbidden (403) - API key may not have required permissions")
+                    print("      Apollo API error: Forbidden (403) - API key may not have required permissions")
                     print(f"      Response: {response.text[:300]}")
                 else:
                     error_text = response.text[:500] if response.text else "No error message"
@@ -221,11 +221,11 @@ class ApolloScraper:
                         error_json = response.json()
                         if "error" in error_json:
                             print(f"      Error message: {error_json.get('error')}")
-                    except:
+                    except Exception:
                         pass
             else:
                 # Fallback: Use cookie-based web scraping method
-                print(f"      Using cookie-based web scraping (free method)")
+                print("      Using cookie-based web scraping (free method)")
                 
                 # Try HTML scraping first (more reliable with cookies)
                 web_contacts = await self._search_via_web(client, company, limit)
@@ -234,7 +234,7 @@ class ApolloScraper:
                     print(f"      Cookie method: Found {len(web_contacts)} contacts via HTML scraping")
                 else:
                     # If HTML scraping failed, try API endpoints as fallback
-                    print(f"      HTML scraping found nothing, trying API endpoints...")
+                    print("      HTML scraping found nothing, trying API endpoints...")
                     title_keywords = []
                     for keywords in PERSONA_KEYWORDS.values():
                         title_keywords.extend(keywords[:2])
@@ -279,11 +279,11 @@ class ApolloScraper:
                             continue
                     
                     if not contacts:
-                        print(f"      ⚠️ All methods failed. Possible reasons:")
-                        print(f"         1. Cookies expired - refresh from browser")
-                        print(f"         2. Apollo changed their endpoints")
-                        print(f"         3. Account restrictions (free tier limitations)")
-                        print(f"      💡 Tip: Try manual contact entry or use LinkedIn/company websites")
+                        print("      ⚠️ All methods failed. Possible reasons:")
+                        print("         1. Cookies expired - refresh from browser")
+                        print("         2. Apollo changed their endpoints")
+                        print("         3. Account restrictions (free tier limitations)")
+                        print("      💡 Tip: Try manual contact entry or use LinkedIn/company websites")
                         
         except Exception as e:
             import traceback
@@ -343,7 +343,7 @@ class ApolloScraper:
         
         try:
             # Step 1: Load the main Apollo page to establish session
-            print(f"      Loading Apollo homepage to establish session...")
+            print("      Loading Apollo homepage to establish session...")
             response = await client.get(
                 f"{self.BASE_URL}/",
                 headers=self._get_headers(),
@@ -385,18 +385,18 @@ class ApolloScraper:
             
             # Step 3: If HTML extraction failed, try to find API calls in the page
             if not contacts:
-                print(f"      HTML extraction found nothing, checking for API endpoints in page...")
+                print("      HTML extraction found nothing, checking for API endpoints in page...")
                 # Look for API endpoints in JavaScript/network calls
                 # This is a fallback - Apollo might load data via AJAX after page load
                 # We'd need a browser automation tool (like Playwright) for this
-                print(f"      Note: Apollo may load contacts via JavaScript after page load")
-                print(f"      Consider using browser automation (Playwright/Selenium) for better results")
+                print("      Note: Apollo may load contacts via JavaScript after page load")
+                print("      Consider using browser automation (Playwright/Selenium) for better results")
                 
         except Exception as e:
-            import traceback
+
             print(f"      Web scraping error: {e}")
             if "timeout" in str(e).lower():
-                print(f"      Timeout - Apollo may be slow or blocking requests")
+                print("      Timeout - Apollo may be slow or blocking requests")
         
         return contacts
     
@@ -475,7 +475,7 @@ class ApolloScraper:
                                 contact = self._parse_embedded_person(person_data, company)
                                 if contact:
                                     contacts.append(contact)
-                            except:
+                            except Exception:
                                 continue
             
             # Method 3: Parse HTML table/list structure (last resort)
@@ -484,7 +484,7 @@ class ApolloScraper:
                 # Look for common contact card patterns
                 # This is very fragile and may break if Apollo changes their HTML
                 contact_cards = soup.find_all(['div', 'tr'], class_=re.compile(r'person|contact|people', re.I))
-                for card in contact_cards[:limit]:
+                for card in contact_cards[:20]:
                     name_elem = card.find(text=re.compile(r'[A-Z][a-z]+ [A-Z][a-z]+'))
                     email_elem = card.find(text=re.compile(r'[\w\.-]+@[\w\.-]+\.\w+'))
                     if name_elem and email_elem:

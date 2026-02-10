@@ -8,8 +8,7 @@ from src.utils.config import get_settings
 from src.utils.database import get_db
 from src.scrapers.job_filter import JobFilter
 from src.scrapers.scraper_utils import (
-    ScrapeResult, ScraperMetrics, RetryConfig, RateLimiter,
-    get_metrics, get_rate_limiter
+    ScrapeResult, RetryConfig, get_metrics, get_rate_limiter
 )
 
 

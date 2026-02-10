@@ -27,7 +27,7 @@ class AIAgentFiller(BaseFiller):
         if not llm_client:
             try:
                 self.llm_client = GeminiClient()
-            except:
+            except Exception:
                 logger.warning("   ⚠️ AI Agent: LLM not available, will use fallback")
                 self.llm_client = None
         
@@ -290,7 +290,7 @@ Return ONLY the JSON, no other text.
                     await page.set_input_files(selector, resume_path)
                     logger.info(f"   📄 Uploaded resume: {selector}")
                     return True
-                except:
+                except Exception:
                     logger.warning(f"   ⚠️ Could not upload resume to {selector}")
                     return False
             
@@ -318,7 +318,7 @@ Return ONLY the JSON, no other text.
                 count = await page.locator(description).count()
                 if count > 0:
                     return description
-            except:
+            except Exception:
                 pass
         
         # Try to find by ID or name
@@ -330,7 +330,7 @@ Return ONLY the JSON, no other text.
             # Check if it's a name
             if await page.locator(f"[name='{description}']").count() > 0:
                 return f"[name='{description}']"
-        except:
+        except Exception:
             pass
         
         # Use LLM to generate selector (if available)
@@ -350,9 +350,9 @@ Examples: #email, [name="phone"], input[type="text"]
                     count = await page.locator(selector).count()
                     if count > 0:
                         return selector
-                except:
+                except Exception:
                     pass
-            except:
+            except Exception:
                 pass
         
         return None
@@ -376,7 +376,7 @@ Examples: #email, [name="phone"], input[type="text"]
             ]
             if any(text in page_text for text in success_texts):
                 return True
-        except:
+        except Exception:
             pass
         
         return False

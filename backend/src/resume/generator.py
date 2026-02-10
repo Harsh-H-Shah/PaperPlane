@@ -1,12 +1,13 @@
-import os
+
 import json
 import subprocess
 import shutil
 from pathlib import Path
-from typing import Optional, List, Dict
+
+
 from jinja2 import Environment, FileSystemLoader
 
-from src.utils.config import get_settings
+
 from src.llm.gemini import GeminiClient
 
 class ResumeGenerator:

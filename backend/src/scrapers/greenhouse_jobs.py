@@ -6,12 +6,12 @@ API Docs: https://developers.greenhouse.io/job-board.html
 import httpx
 import asyncio
 from typing import Optional
-from datetime import datetime
+
 
 from src.scrapers.base_scraper import BaseScraper
 from src.scrapers.scraper_utils import parse_date_string
 from src.core.job import Job, JobSource, ApplicationType
-from src.classifiers.detector import detect_application_type
+
 
 
 # Curated list of tech companies using Greenhouse
@@ -160,5 +160,5 @@ class GreenhouseJobsScraper(BaseScraper):
                     "requisition_id": item.get("requisition_id"),
                 },
             )
-        except Exception as e:
+        except Exception:
             return None

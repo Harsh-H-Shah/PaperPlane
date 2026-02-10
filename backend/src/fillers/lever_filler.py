@@ -1,11 +1,9 @@
-from typing import Optional
 from playwright.async_api import Page
 
-from src.core.applicant import Applicant
 from src.core.application import Application
 from src.core.job import Job
 from src.fillers.base_filler import BaseFiller
-from src.llm.gemini import GeminiClient
+
 
 
 class LeverFiller(BaseFiller):
@@ -62,11 +60,11 @@ class LeverFiller(BaseFiller):
                     await resume_input.set_input_files(resume_path)
                     application.resume_uploaded = True
                     application.add_log("uploaded_resume", "Resume uploaded")
-                    print(f"   ✅ Resume uploaded")
+                    print("   ✅ Resume uploaded")
                 else:
                     print("   ⚠️ No file input found for resume")
             else:
-                print(f"   ❌ Resume file not found")
+                print("   ❌ Resume file not found")
             
             await self._fill_urls(page)
             await self._handle_custom_questions(page, job, application)

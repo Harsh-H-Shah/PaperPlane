@@ -1,11 +1,8 @@
-from typing import Optional
 from playwright.async_api import Page
-
-from src.core.applicant import Applicant
+import asyncio
 from src.core.application import Application
 from src.core.job import Job
 from src.fillers.base_filler import BaseFiller
-from src.llm.gemini import GeminiClient
 
 
 class GreenhouseFiller(BaseFiller):
@@ -35,7 +32,7 @@ class GreenhouseFiller(BaseFiller):
         return gh_elements > 0
     
     async def fill(self, page: Page, job: Job, application: Application) -> bool:
-        import asyncio
+
         application.start()
         
         try:
@@ -92,7 +89,7 @@ class GreenhouseFiller(BaseFiller):
             return False
             
     async def submit_application(self, page) -> bool:
-        import asyncio
+
         submit_btn = page.locator("button[type='submit'], input[type='submit'], #submit_app")
         if await submit_btn.count() > 0:
             # Scroll to it
@@ -108,7 +105,8 @@ class GreenhouseFiller(BaseFiller):
                 try:
                     await page.screenshot(path="debug_before_submit.png")
                     print("   📸 Created debug_before_submit.png")
-                except: pass
+                except Exception:
+                    pass
                 
                 await submit_btn.first.click()
                 
@@ -117,7 +115,7 @@ class GreenhouseFiller(BaseFiller):
                 try:
                     await page.wait_for_url(lambda u: "confirmation" in u.lower() or "success" in u.lower(), timeout=15000)
                     return True
-                except:
+                except Exception:
                     # Check for success text
                     content = (await page.content()).lower()
                     success_patterns = [
@@ -148,7 +146,7 @@ class GreenhouseFiller(BaseFiller):
                                  mail = MailHandler()
                                  
                                  print("   ⏳ Waiting for verification code to arrive (polling up to 90s)...")
-                                 import asyncio
+
                                  
                                  code = None
                                  # Poll every 15 seconds for up to 6 attempts (90 seconds total)
@@ -171,7 +169,8 @@ class GreenhouseFiller(BaseFiller):
                                      if split_inputs > 0:
                                          print(f"   🔢 Filling split inputs with code: {clean_code}")
                                          for i, char in enumerate(clean_code):
-                                             if i >= split_inputs: break
+                                             if i >= split_inputs:
+                                                 break
                                              await page.locator(f"#security-input-{i}").fill(char)
                                              await asyncio.sleep(0.1)
                                      else:
@@ -246,7 +245,8 @@ class GreenhouseFiller(BaseFiller):
                                              found_errors.append(f"[{label_text.strip()}]: {text.strip()}")
                                          else:
                                              found_errors.append(f"[{sel}]: {text.strip()}")
-                            except: pass
+                            except Exception:
+                                pass
                         
                          if found_errors:
                             print(f"   ❌ CAPTURED VALIDATION ERRORS: {found_errors}")
@@ -255,7 +255,8 @@ class GreenhouseFiller(BaseFiller):
                                 with open("greenhouse_validation_dump.html", "w") as f:
                                     f.write(content)
                                 print("   📄 Saved greenhouse_validation_dump.html")
-                            except: pass
+                            except Exception:
+                                pass
                          else:
                             print("   ❌ No specific error text found (Might be Top-Level Alert or Captcha).")
 
@@ -281,21 +282,21 @@ class GreenhouseFiller(BaseFiller):
             try:
                 if await frame.locator(self.SELECTORS["first_name"]).count() > 0:
                     return frame
-            except:
+            except Exception:
                 continue
         return None
     
     async def _fill_basic_info(self, page) -> bool:
-        import asyncio
+
         # Returns True if at least one field was filled, or if primary fields found
         f = await self.fill_text_field(page, self.SELECTORS["first_name"], self.applicant.first_name)
         await asyncio.sleep(0.5)
-        l = await self.fill_text_field(page, self.SELECTORS["last_name"], self.applicant.last_name)
+        last_name_success = await self.fill_text_field(page, self.SELECTORS["last_name"], self.applicant.last_name)
         await asyncio.sleep(0.5)
         e = await self.fill_text_field(page, self.SELECTORS["email"], self.applicant.email)
         await asyncio.sleep(0.5)
-        p = await self.fill_text_field(page, self.SELECTORS["phone"], self.applicant.phone)
-        return f and l and e # Phone is sometimes optional
+        await self.fill_text_field(page, self.SELECTORS["phone"], self.applicant.phone)
+        return f and last_name_success and e # Phone is sometimes optional
     
     async def _upload_resume(self, page) -> bool:
         from pathlib import Path
@@ -353,7 +354,6 @@ class GreenhouseFiller(BaseFiller):
             await self.fill_text_field(page, self.SELECTORS["website"], website)
 
     async def _handle_custom_questions(self, page, job: Job, application: Application) -> None:
-        import asyncio
         # Broader selector to catch all fields with labels
         questions = page.locator("div.field, div.custom-question, .application-question, div:has(> label), div:has(> .label)")
         count = await questions.count()
@@ -426,7 +426,8 @@ class GreenhouseFiller(BaseFiller):
             input_field = question_el.locator("input, textarea, select, [role='combobox']").first
             if await input_field.count() == 0:
                  # Check if we already handled it?
-                 if is_dropdown: continue # Handled above but maybe logic failed
+                 if is_dropdown:
+                     continue # Handled above but maybe logic failed
                  
                  print(f"      -> Review item added: {question_text} (Unknown field type)")
                  application.questions_for_review[question_text] = "Unknown field type"
@@ -442,7 +443,7 @@ class GreenhouseFiller(BaseFiller):
             disability_el = page.locator("select[id*='disability'], select[name*='disability'], #disability_status, [aria-labelledby*='disability_status-label']").first
             
             if await disability_el.count() > 0 and await disability_el.is_visible():
-                 val = await disability_el.input_value()
+                 await disability_el.input_value()
                  # React Selects often have empty value but show placeholder
                  # checks value attrib or check if placeholder is visible?
                  # Actually, usually input value is empty until typed, but for dropdowns...
@@ -456,13 +457,15 @@ class GreenhouseFiller(BaseFiller):
                 with open("greenhouse_page_dump.html", "w") as f:
                     f.write(content)
                 print("   📄 Saved greenhouse_page_dump.html for inspection")
-            except: pass
+            except Exception:
+                pass
                 
     async def _handle_autocomplete(self, field, question: str) -> bool:
-        import asyncio
+
         # 1. Determine value
         value = await self.field_mapper.get_value(question)
-        if not value: return False
+        if not value:
+            return False
         
         print(f"DEBUG: Handling Autocomplete for '{question}' with '{value}'")
         
@@ -545,7 +548,8 @@ class GreenhouseFiller(BaseFiller):
             try:
                 await field.press("Escape")
                 await field.page.mouse.click(0, 0) # Click top-left of body to blur
-            except: pass
+            except Exception:
+                pass
             
             return True
         except Exception as e:
@@ -554,11 +558,12 @@ class GreenhouseFiller(BaseFiller):
             try:
                 await field.press("Escape")
                 await field.page.mouse.click(0, 0)
-            except: pass
+            except Exception:
+                pass
             return False
     
     async def _handle_dropdown(self, field, question: str) -> None:
-        import asyncio
+
         tag = await field.evaluate("el => el.tagName.toLowerCase()")
         
         # If standard select
@@ -568,7 +573,7 @@ class GreenhouseFiller(BaseFiller):
             if best_option:
                 try:
                     await field.select_option(label=best_option)
-                except:
+                except Exception:
                     # Fallback for value matching
                     await field.select_option(value=best_option)
         else:
@@ -641,7 +646,8 @@ class GreenhouseFiller(BaseFiller):
     
     async def _handle_input(self, field, question: str, job: Job) -> None:
         value = await self.field_mapper.get_value(question)
-        if not value: return
+        if not value:
+            return
         
         try:
             # Check if it's actually a SELECT element that fell through

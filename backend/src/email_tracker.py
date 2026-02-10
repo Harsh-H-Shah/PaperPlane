@@ -1,11 +1,9 @@
 import re
-import base64
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 from dataclasses import dataclass
 from enum import Enum
 
-import httpx
 
 from src.utils.config import get_settings
 from src.utils.database import get_db

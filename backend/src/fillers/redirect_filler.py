@@ -1,6 +1,6 @@
 from playwright.async_api import Page
 from src.core.application import Application
-from src.core.job import Job, JobSource
+from src.core.job import Job
 from src.fillers.base_filler import BaseFiller
 from src.utils.logger import logger
 from src.utils.config import get_settings
@@ -147,7 +147,7 @@ class RedirectFiller(BaseFiller):
                         break
                     except Exception as e:
                         logger.warning(f"   ⚠️ Failed to click '{selector}': {e}")
-            except:
+            except Exception:
                 continue
 
         if not found_button:
@@ -159,7 +159,7 @@ class RedirectFiller(BaseFiller):
             # Wait for navigation or popup
             try:
                 await page.wait_for_load_state("networkidle", timeout=5000)
-            except:
+            except Exception:
                 pass  # Timeout is OK, page might still be usable
             logger.info("   ✅ Redirect initiated")
             return True
@@ -200,7 +200,8 @@ class RedirectFiller(BaseFiller):
                 if score > candidate_score:
                     candidate = btn
                     candidate_score = score
-            except: continue
+            except Exception:
+                continue
         
         if candidate and candidate_score > 0:
             logger.info(f"   🎯 Highest scoring redirect button: '{await candidate.text_content()}' ({candidate_score})")

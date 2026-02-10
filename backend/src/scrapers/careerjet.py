@@ -3,14 +3,13 @@ Careerjet Scraper - Web scraping approach (no API key required)
 Scrapes job listings directly from careerjet.com
 """
 import httpx
-import re
+
 from typing import Optional
-from datetime import datetime
 from bs4 import BeautifulSoup
 
 from src.scrapers.base_scraper import BaseScraper
 from src.scrapers.scraper_utils import parse_date_string
-from src.core.job import Job, JobSource, ApplicationType
+from src.core.job import Job, JobSource
 from src.classifiers.detector import detect_application_type
 
 

@@ -4,14 +4,13 @@ import re
 from typing import Optional
 from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 
-# Suppress XML parsing warning for RSS feeds
-warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
-
 from src.scrapers.base_scraper import BaseScraper
 from src.scrapers.scraper_utils import parse_date_string
 from src.core.job import Job, JobSource
-from src.classifiers.detector import detect_application_type
 from src.utils.config import get_settings
+
+# Suppress XML parsing warning for RSS feeds
+warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
 
 
@@ -124,7 +123,7 @@ class BuiltInScraper(BaseScraper):
                         if 'builtin.com' in href and '/redirect' not in href:
                             continue
                         return href
-                except:
+                except Exception:
                     continue
             
             # Also check for data attributes or onclick handlers that might have the URL
@@ -201,7 +200,7 @@ class BuiltInScraper(BaseScraper):
                     jobs.append(job)
                     if len(jobs) >= limit:
                         break
-            except Exception as e:
+            except Exception:
                 # print(f"Error parsing BuiltIn card: {e}")
                 continue
         

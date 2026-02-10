@@ -1,4 +1,5 @@
 import time
+import asyncio
 import json
 from datetime import datetime, date
 from pathlib import Path
@@ -130,7 +131,7 @@ class GeminiClient:
             if not can_proceed:
                 if "Rate limited" in reason:
                     if attempt == 0:
-                        print(f"   ⏳ Rate limited, waiting briefly...")
+                        print("   ⏳ Rate limited, waiting briefly...")
                     # Non-blocking wait in async
                     await asyncio.sleep(min(1.0, self.rate_limiter.MIN_REQUEST_INTERVAL))
                     continue

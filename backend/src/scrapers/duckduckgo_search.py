@@ -222,7 +222,7 @@ class DuckDuckGoScraper(BaseScraper):
             if ":" in domain:
                 domain = domain.split(":")[0]
             return domain if domain else None
-        except:
+        except Exception:
             return None
     
     def _detect_application_type(self, url: str) -> tuple:
@@ -230,6 +230,6 @@ class DuckDuckGoScraper(BaseScraper):
         from src.classifiers.detector import detect_application_type
         try:
             return detect_application_type(url)
-        except:
+        except Exception:
             return ApplicationType.UNKNOWN, 0.0
 

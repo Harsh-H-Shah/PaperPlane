@@ -6,10 +6,10 @@ from pathlib import Path
 
 from src.core.job import Job, JobStatus, ApplicationType, JobSource
 from src.core.applicant import Applicant
-from src.core.application import Application, ApplicationStatus
+from src.core.application import Application
 from src.utils.config import get_settings
 from src.utils.database import get_db
-from src.utils.browser import BrowserManager, browser_session
+from src.utils.browser import BrowserManager
 from src.classifiers.detector import detect_application_type
 from src.fillers.base_filler import BaseFiller
 from src.fillers.greenhouse_filler import GreenhouseFiller
@@ -162,7 +162,7 @@ class Orchestrator:
         if isinstance(app_type, str):
             try:
                 app_type = ApplicationType(app_type)
-            except:
+            except Exception:
                 pass
                 
         filler_class = self.fillers.get(app_type)
@@ -241,7 +241,7 @@ class Orchestrator:
             
             page = await self.browser_manager.new_page()
 
-            logger.info(f"   🌐 Opening application page...")
+            logger.info("   🌐 Opening application page...")
             try:
                 response = await page.goto(job.apply_url or job.url, wait_until="domcontentloaded", timeout=30000)
                 if response and (response.status == 404 or response.status >= 500):
@@ -293,7 +293,7 @@ class Orchestrator:
                                  # Same tab navigation
                                  await page.wait_for_timeout(3000)
                                  await page.wait_for_load_state("networkidle", timeout=10000)
-                        except Exception as e:
+                        except Exception:
                              # No new page, maybe same tab?
                              await page.wait_for_timeout(3000)
                         
@@ -314,8 +314,10 @@ class Orchestrator:
             # --- Final Filler Selection ---
             app_type = job.application_type
             if isinstance(app_type, str):
-                try: app_type = ApplicationType(app_type)
-                except: pass
+                try:
+                    app_type = ApplicationType(app_type)
+                except ValueError:
+                    pass
                 
             filler_class = self.fillers.get(app_type, UniversalFiller)
             
@@ -346,7 +348,7 @@ class Orchestrator:
                 else:
                     return False
             
-            logger.info(f"   ✏️ Filling form...")
+            logger.info("   ✏️ Filling form...")
             success = await filler.fill(page, job, application)
             
             # If filler failed, try AI Agent as fallback
@@ -398,7 +400,7 @@ class Orchestrator:
         logger.info("="*60)
 
 async def run_auto_apply(max_applications: int = 5, scrape_first: bool = True, dry_run: bool = False, filter_type: Optional[ApplicationType] = None) -> dict:
-    settings = get_settings()
+
     
     profile_path = Path("data/profile.json")
     

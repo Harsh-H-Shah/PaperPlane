@@ -2,16 +2,15 @@
 Cold Email Service - Main orchestrator for cold email outreach.
 Ties together scraping, templates, personalization, scheduling, and sending.
 """
-import asyncio
 from datetime import datetime
 from typing import Optional
 
 from src.core.cold_email_models import (
-    Contact, ColdEmail, EmailTemplate, EmailStatus, ContactPersona
+    Contact, ColdEmail, EmailStatus, ContactPersona
 )
 from src.core.job import Job
 from src.utils.database import get_db
-from src.scrapers.apollo_scraper import ApolloScraper, scrape_contacts_for_job
+from src.scrapers.apollo_scraper import ApolloScraper
 from src.email.email_templates import TemplateManager, get_template_variables
 from src.email.email_personalizer import EmailPersonalizer
 from src.email.email_scheduler import EmailScheduler

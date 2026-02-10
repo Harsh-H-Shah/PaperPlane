@@ -1,5 +1,5 @@
 from typing import Optional, List, Dict, Any
-from playwright.async_api import Page, ElementHandle
+from playwright.async_api import Page
 import json
 import asyncio
 
@@ -180,7 +180,7 @@ class UniversalFiller(BaseFiller):
                 # Mark which frame they belong to if needed, or rely on data-auto-id + page.locator(..., frame=...)
                 # For simplicity, we assume we can locate them via global locator if we use the attribute
                 all_elements.extend(frame_elements)
-            except:
+            except Exception:
                 continue
                 
         return all_elements
@@ -220,7 +220,7 @@ class UniversalFiller(BaseFiller):
             elif "```" in response:
                 response = response.split("```")[1].split("```")[0]
             return json.loads(response.strip())
-        except:
+        except Exception:
             return {}
 
     async def _apply_value(self, page: Page, element_id: str, value: Any) -> bool:
@@ -291,16 +291,21 @@ class UniversalFiller(BaseFiller):
                 for b_info in btns:
                     text = b_info['text']
                     score = 0
-                    if "submit" in text or "apply" in text: score = 10
-                    elif "continue" in text or "next" in text: score = 8
-                    elif "review" in text: score = 5
+                    if "submit" in text or "apply" in text:
+                        score = 10
+                    elif "continue" in text or "next" in text:
+                        score = 8
+                    elif "review" in text:
+                        score = 5
                     
-                    if "back" in text or "cancel" in text or "login" in text: score = -10
+                    if "back" in text or "cancel" in text or "login" in text:
+                        score = -10
                     
                     if score > candidate_score:
                         candidate = frame.locator(f"[data-btn-id='{b_info['id']}']")
                         candidate_score = score
-            except: continue
+            except Exception:
+                continue
         
         if candidate and candidate_score > 0:
             await candidate.first.click()

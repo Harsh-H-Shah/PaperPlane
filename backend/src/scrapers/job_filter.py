@@ -1,6 +1,6 @@
 import re
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 from src.core.job import Job
 
 

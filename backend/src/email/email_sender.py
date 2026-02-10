@@ -7,8 +7,6 @@ import asyncio
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.utils import formataddr
-from datetime import datetime
-from typing import Optional
 
 from src.core.cold_email_models import ColdEmail, Contact, EmailStatus
 from src.utils.database import get_db
