@@ -81,6 +81,10 @@ jobs:
             # Pull latest code
             git pull origin main
 
+            # Ensure bind-mounted dirs are writable by container user (appuser, UID 1001)
+            mkdir -p data logs
+            chmod 777 data logs
+
             # Rebuild and restart backend
             docker compose up -d --build backend
 

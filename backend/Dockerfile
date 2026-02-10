@@ -38,9 +38,14 @@ COPY . .
 # Create data directories
 RUN mkdir -p data logs
 
-# Create non-root user
+# Create non-root user and set ownership
 RUN useradd -m -s /bin/bash appuser && \
     chown -R appuser:appuser /app
+
+# Copy entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 USER appuser
 
 EXPOSE 8080
@@ -49,4 +54,6 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD python -c "import httpx; httpx.get('http://localhost:8080/api/stats')" || exit 1
 
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["python", "main.py", "dashboard", "--host", "0.0.0.0", "--port", "8080"]
+
