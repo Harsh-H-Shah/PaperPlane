@@ -86,8 +86,16 @@ class NotificationsConfig(BaseModel):
     quiet_hours: QuietHours = Field(default_factory=QuietHours)
 
 
+def resolve_db_path() -> str:
+    # Check for Docker environment path first
+    if Path("/app/data").exists():
+        return "/app/data/applications.db"
+    # Fallback to local dev path
+    return str(Path(__file__).parents[3] / "data" / "applications.db")
+
+
 class DatabaseConfig(BaseModel):
-    path: str = str(Path(__file__).parents[3] / "data" / "applications.db")
+    path: str = Field(default_factory=resolve_db_path)
     echo: bool = False
 
 
