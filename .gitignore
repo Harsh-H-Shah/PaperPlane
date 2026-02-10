@@ -11,6 +11,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!frontend/lib/
 lib64/
 parts/
 sdist/
@@ -69,6 +70,10 @@ probe_output.txt
 backend/data/debug_*.html
 backend/data/*.corrupted
 backend/src/scripts/data/
+
+# Vercel
+.vercel/
+frontend/.vercel/
 
 # Frontend build artifacts
 frontend/.next/
