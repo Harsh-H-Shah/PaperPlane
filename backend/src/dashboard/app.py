@@ -513,7 +513,8 @@ SCRAPE_STATUS = {
     "current_source": "",
     "jobs_found": 0,
     "jobs_new": 0,
-    "last_updated": None
+    "last_updated": None,
+    "errors": [],
 }
 
 @app.get("/api/scrape/progress")
@@ -530,28 +531,40 @@ async def trigger_scrape(request: ScrapeRequest, background_tasks: BackgroundTas
         SCRAPE_STATUS["is_running"] = True
         SCRAPE_STATUS["jobs_found"] = 0
         SCRAPE_STATUS["jobs_new"] = 0
+        SCRAPE_STATUS["errors"] = []
         SCRAPE_STATUS["last_updated"] = datetime.now()
         
         try:
             from src.scrapers.aggregator import JobAggregator
+            import traceback
             # Run manually to update progress
             agg = JobAggregator(validate_links=True)
             
             sources = request.sources or [s.SOURCE_NAME.lower() for s in agg.scrapers]
+            print(f"DEBUG SCRAPE: Starting scrape for sources: {sources}")
             
             for source in sources:
                 SCRAPE_STATUS["current_source"] = source
                 SCRAPE_STATUS["last_updated"] = datetime.now()
+                print(f"DEBUG SCRAPE: Scraping source: {source}")
                 
                 try:
                     jobs, raw_count = await agg.scrape_source(source, limit=request.limit)
                     SCRAPE_STATUS["jobs_found"] += raw_count
                     SCRAPE_STATUS["jobs_new"] += len(jobs)
+                    print(f"DEBUG SCRAPE: {source} -> found={raw_count}, new={len(jobs)}")
                 except Exception as e:
-                    print(f"Scrape error {source}: {e}")
+                    error_msg = f"{source}: {str(e)}"
+                    tb = traceback.format_exc()
+                    print(f"Scrape error {error_msg}\n{tb}")
+                    SCRAPE_STATUS["errors"].append(error_msg)
             
             SCRAPE_STATUS["current_source"] = "Done"
             
+        except Exception as e:
+            import traceback
+            print(f"CRITICAL SCRAPE ERROR: {e}\n{traceback.format_exc()}")
+            SCRAPE_STATUS["errors"].append(f"CRITICAL: {str(e)}")
         finally:
             SCRAPE_STATUS["is_running"] = False
             SCRAPE_STATUS["current_source"] = ""
