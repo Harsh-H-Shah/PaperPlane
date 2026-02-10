@@ -1,149 +1,211 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { motion, useSpring, useTransform, useMotionValue } from 'framer-motion';
+import { useState, useEffect, useCallback } from 'react';
 
-const MAPS = [
-  { name: 'ASCENT', uuid: '7eaecc1b-4337-bbf6-6ab9-04b8f06b3319', coordinates: '45°26\'BF" N, 12°20\'Q" E' },
-  { name: 'BIND', uuid: '2c9d57ec-4431-9c5e-2939-8f9ef6dd5cba', coordinates: '34°02\'A" N, 6°51\'Z" W' },
-  { name: 'SPLIT', uuid: 'd960549e-485c-e861-8d71-aa9d1aed12a2', coordinates: '35°41\'CD" N, 139°41\'WX" E' },
-  { name: 'HAVEN', uuid: '2bee0dc9-4ffe-519b-1cbd-7fbe763a6047', coordinates: '27°28\'A" N, 89°38\'WZ" E' },
-  { name: 'ICEBOX', uuid: 'e2ad5c54-4114-a870-9641-8ea21279579a', coordinates: '76°44\'A" N, 149°30\'Z" E' },
+const TAGLINES = [
+  'ESTABLISHING CONNECTION...',
+  'LOADING RECON DATA...',
+  'CALIBRATING SYSTEMS...',
+  'MAPPING TARGETS...',
+  'SYNCING INTEL...',
 ];
 
 export default function LoadingScreen({ onComplete }: { onComplete: () => void }) {
-  const [map, setMap] = useState(MAPS[0]);
   const [progress, setProgress] = useState(0);
-  
-  // Motion values for parallax
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const moveX = useTransform(x, [0, typeof window !== 'undefined' ? window.innerWidth : 1920], [-20, 20]);
-  const moveY = useTransform(y, [0, typeof window !== 'undefined' ? window.innerHeight : 1080], [-20, 20]);
+  const [tagline] = useState(() => TAGLINES[Math.floor(Math.random() * TAGLINES.length)]);
+
+  const stableOnComplete = useCallback(onComplete, [onComplete]);
 
   useEffect(() => {
-    // Select random map
-    setMap(MAPS[Math.floor(Math.random() * MAPS.length)]);
+    // Single RAF-based progress animation — no setInterval, no re-renders every 50ms
+    const duration = 2400; // ms — fast but not jarring
+    const start = performance.now();
+    let raf: number;
 
-    // Progress bar animation
-    const duration = 5000;
-    const interval = 50;
-    const steps = duration / interval;
-    let currentStep = 0;
+    const tick = (now: number) => {
+      const elapsed = now - start;
+      const pct = Math.min(100, (elapsed / duration) * 100);
+      // Use easeOutQuart for smooth deceleration
+      const eased = 1 - Math.pow(1 - pct / 100, 4);
+      setProgress(Math.floor(eased * 100));
 
-    const timer = setInterval(() => {
-      currentStep++;
-      const val = Math.min(100, (currentStep / steps) * 100);
-      setProgress(val);
-      
-      if (currentStep >= steps) {
-        clearInterval(timer);
-        setTimeout(onComplete, 800);
+      if (elapsed < duration) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        setProgress(100);
+        setTimeout(stableOnComplete, 400);
       }
-    }, interval);
+    };
 
-    return () => clearInterval(timer);
-  }, [onComplete]);
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    x.set(e.clientX);
-    y.set(e.clientY);
-  };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [stableOnComplete]);
 
   return (
-    <div 
-      onMouseMove={handleMouseMove}
-      className="fixed inset-0 z-50 bg-black flex flex-col justify-between text-white overflow-hidden cursor-crosshair"
-    >
-      {/* Background with Parallax */}
-      <motion.div 
-        className="parallax-bg absolute inset-0 bg-cover bg-center"
-        style={{ 
-          backgroundImage: `url('https://media.valorant-api.com/maps/${map.uuid}/splash.png')`,
-          x: moveX,
-          y: moveY,
-          scale: 1.1
-        }}
-        initial={{ opacity: 0, scale: 1.2 }}
-        animate={{ opacity: 1, scale: 1.1 }}
-        transition={{ duration: 1.5, ease: "easeOut" }}
-      />
+    <div className="loading-screen">
+      {/* Subtle grid pattern — CSS only, no external image */}
+      <div className="loading-grid" />
       
-      {/* Overlays */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-black/40 pointer-events-none" />
-      <div className="absolute inset-0 bg-[url('/grid-pattern.png')] opacity-20 pointer-events-none mix-blend-overlay" />
-
-      {/* Map Name (Side Layout) */}
-      <div className="absolute top-0 left-0 bottom-0 flex items-center z-0">
-          <motion.h1 
-            className="font-display text-[20vh] font-bold tracking-tighter opacity-10 select-none leading-none -ml-8 vertical-rl" 
-            style={{ writingMode: 'vertical-rl' }}
-            initial={{ x: -100, opacity: 0 }}
-            animate={{ x: 0, opacity: 0.1 }}
-            transition={{ duration: 1, delay: 0.5 }}
-          >
-            {map.name}
-          </motion.h1>
+      {/* Center content */}
+      <div className="loading-center">
+        <h2 className="loading-title">PAPERPLANE</h2>
+        <div className="loading-divider">
+          <span className="loading-diamond" />
+        </div>
+        <p className="loading-tagline">{tagline}</p>
       </div>
 
-      {/* Center Content */}
-      <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
-        
-        {/* Main Title */}
-        <div className="flex flex-col items-center justify-center scale-110">
-            <motion.h2 
-              className="font-display text-9xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-b from-white to-white/50 drop-shadow-2xl glitch-text"
-              initial={{ scale: 2, opacity: 0, letterSpacing: "0.5em" }}
-              animate={{ scale: 1, opacity: 1, letterSpacing: "0.1em" }}
-              transition={{ duration: 0.8, type: "spring", bounce: 0.4 }}
-            >
-              MATCH FOUND
-            </motion.h2>
-            
-            <motion.div 
-              className="mt-8 flex items-center gap-4"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.8, duration: 0.5 }}
-            >
-               <div className="h-[1px] w-12 bg-[var(--valo-red)]"></div>
-               <div className="text-[var(--valo-red)] font-mono tracking-[0.3em] text-lg">
-                  {map.coordinates}
-               </div>
-               <div className="h-[1px] w-12 bg-[var(--valo-red)]"></div>
-            </motion.div>
+      {/* Bottom progress */}
+      <div className="loading-bottom">
+        <div className="loading-info">
+          <span className="loading-label">INITIALIZING</span>
+          <span className="loading-percent">{progress}%</span>
         </div>
-      </div>
-
-      {/* Bottom Bar */}
-      <div className="relative z-10 w-full pb-8">
-        <div className="flex justify-between items-end mb-2 px-12">
-          <div className="flex flex-col gap-1">
-             <motion.span 
-               className="font-display text-4xl text-white/80"
-               initial={{ opacity: 0, x: -20 }}
-               animate={{ opacity: 1, x: 0 }}
-               transition={{ delay: 1 }}
-             >
-               LOADING ASSETS
-             </motion.span>
-             <span className="text-[var(--valo-red)] text-sm font-mono animate-pulse">ESTABLISHING CONNECTION...</span>
-          </div>
-          <div className="font-mono text-6xl font-bold text-white/50">
-            {Math.floor(progress)}%
-          </div>
-        </div>
-        
-        {/* Progress Bar - Full Width */}
-        <div className="w-full h-4 bg-white/10 relative overflow-hidden">
-          <motion.div 
-            className="h-full bg-[var(--valo-red)] box-shadow-[0_0_20px_var(--valo-red)]"
-            initial={{ width: "0%" }}
-            animate={{ width: `${progress}%` }}
-            transition={{ type: "tween", ease: "linear", duration: 0.05 }}
+        <div className="loading-bar-track">
+          <div 
+            className="loading-bar-fill" 
+            style={{ width: `${progress}%` }} 
           />
         </div>
       </div>
+
+      <style jsx>{`
+        .loading-screen {
+          position: fixed;
+          inset: 0;
+          z-index: 100;
+          background: #0a0a0f;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          color: white;
+          overflow: hidden;
+          animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        .loading-grid {
+          position: absolute;
+          inset: 0;
+          opacity: 0.04;
+          background-image: 
+            linear-gradient(rgba(255,70,85,0.3) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,70,85,0.3) 1px, transparent 1px);
+          background-size: 60px 60px;
+        }
+
+        .loading-center {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 16px;
+          animation: slideUp 0.6s ease-out both;
+          animation-delay: 0.15s;
+        }
+
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .loading-title {
+          font-family: var(--font-teko), sans-serif;
+          font-size: clamp(3rem, 8vw, 6rem);
+          font-weight: 700;
+          letter-spacing: 0.2em;
+          background: linear-gradient(180deg, #fff 40%, rgba(255,255,255,0.4));
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          line-height: 1;
+          margin: 0;
+        }
+
+        .loading-divider {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          width: 200px;
+        }
+        .loading-divider::before, .loading-divider::after {
+          content: '';
+          flex: 1;
+          height: 1px;
+          background: linear-gradient(90deg, transparent, #ff4655, transparent);
+        }
+
+        .loading-diamond {
+          width: 6px;
+          height: 6px;
+          background: #ff4655;
+          transform: rotate(45deg);
+          flex-shrink: 0;
+        }
+
+        .loading-tagline {
+          font-family: var(--font-rajdhani), monospace;
+          font-size: 0.8rem;
+          letter-spacing: 0.3em;
+          color: #ff4655;
+          opacity: 0.9;
+          animation: pulse 2s ease-in-out infinite;
+          margin: 0;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 1; }
+        }
+
+        .loading-bottom {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          padding: 24px 48px 32px;
+        }
+
+        .loading-info {
+          display: flex;
+          justify-content: space-between;
+          align-items: baseline;
+          margin-bottom: 8px;
+        }
+
+        .loading-label {
+          font-family: var(--font-teko), sans-serif;
+          font-size: 1.2rem;
+          letter-spacing: 0.15em;
+          color: rgba(255,255,255,0.5);
+        }
+
+        .loading-percent {
+          font-family: var(--font-rajdhani), monospace;
+          font-size: 2rem;
+          font-weight: 600;
+          color: rgba(255,255,255,0.3);
+        }
+
+        .loading-bar-track {
+          width: 100%;
+          height: 3px;
+          background: rgba(255,255,255,0.08);
+          overflow: hidden;
+        }
+
+        .loading-bar-fill {
+          height: 100%;
+          background: #ff4655;
+          box-shadow: 0 0 12px rgba(255,70,85,0.5);
+          transition: width 0.1s linear;
+          will-change: width;
+        }
+      `}</style>
     </div>
   );
 }
