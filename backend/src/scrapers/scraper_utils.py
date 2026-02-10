@@ -4,7 +4,7 @@ import httpx
 import random
 import re
 from datetime import datetime, timedelta
-from typing import Optional, TypeVar, Callable, Any
+from typing import Optional, TypeVar, Callable
 from dataclasses import dataclass, field
 
 

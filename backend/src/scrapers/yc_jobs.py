@@ -1,10 +1,7 @@
 import httpx
 import re
-from typing import Optional
-from datetime import datetime
-
 from src.scrapers.base_scraper import BaseScraper
-from src.core.job import Job, JobSource, ApplicationType
+from src.core.job import Job, JobSource
 from src.classifiers.detector import detect_application_type
 
 

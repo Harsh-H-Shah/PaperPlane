@@ -1,6 +1,5 @@
 import asyncio
 import sys
-import os
 from pathlib import Path
 
 # Ensure backend directory is in python path

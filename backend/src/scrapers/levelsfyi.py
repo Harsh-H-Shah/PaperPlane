@@ -8,16 +8,13 @@ This scraper uses multiple approaches:
 3. Salary data with job links
 """
 import httpx
-import os
 import re
 import json
 import asyncio
 from typing import Optional
-from datetime import datetime
 from bs4 import BeautifulSoup
 
 from src.scrapers.base_scraper import BaseScraper
-from src.scrapers.scraper_utils import parse_date_string
 from src.core.job import Job, JobSource, ApplicationType
 from src.classifiers.detector import detect_application_type
 
@@ -169,7 +166,7 @@ class LevelsfyiScraper(BaseScraper):
                         jobs = self._parse_company_page(response.text, company, keywords)
                         if jobs:
                             break
-                except:
+                except Exception:
                     continue
                     
         except Exception:
@@ -203,7 +200,7 @@ class LevelsfyiScraper(BaseScraper):
                             break
                     except json.JSONDecodeError:
                         continue
-            except:
+            except Exception:
                 continue
         
         return jobs[:limit]
@@ -419,7 +416,7 @@ class LevelsfyiScraper(BaseScraper):
                 job_type="Full-time",
                 tags=["levelsfyi"],
             )
-        except Exception as e:
+        except Exception:
             # print(f"DEBUG: Levels.fyi parse error: {e}")
             return None
     

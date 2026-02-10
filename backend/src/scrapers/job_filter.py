@@ -53,7 +53,7 @@ class JobFilter:
         
         for pattern in self._exclude_patterns:
             if pattern.search(title):
-                return False, f"Senior/lead role detected in title"
+                return False, "Senior/lead role detected in title"
         
         is_technical = False
         for pattern in self._include_patterns:
@@ -64,10 +64,10 @@ class JobFilter:
         if not is_technical:
             return False, "Not a technical/software role"
         
-        is_entry_level = False
+        # is_entry_level = False
         for pattern in self._entry_patterns:
             if pattern.search(title):
-                is_entry_level = True
+                # is_entry_level = True
                 break
         
         years_required = self._extract_years_experience(description)

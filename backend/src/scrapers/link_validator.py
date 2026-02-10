@@ -84,7 +84,7 @@ class LinkValidator:
             except httpx.TimeoutException:
                 # Assume valid if timeout, but can't get final URL
                 return True, None, url
-            except Exception as e:
+            except Exception:
                 return True, None, url
 
     def _detect_application_type(self, url: str) -> str:
@@ -142,7 +142,7 @@ class LinkValidator:
                     
                     return True, None, final_url
                     
-            except Exception as e:
+            except Exception:
                 return True, None, None
 
 

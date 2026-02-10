@@ -2,11 +2,10 @@ import httpx
 import re
 import os
 from typing import Optional
-from datetime import datetime
 
 from src.scrapers.base_scraper import BaseScraper
 from src.scrapers.scraper_utils import parse_date_string
-from src.core.job import Job, JobSource, ApplicationType
+from src.core.job import Job, JobSource
 from src.classifiers.detector import detect_application_type
 
 

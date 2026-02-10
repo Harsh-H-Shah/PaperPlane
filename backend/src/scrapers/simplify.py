@@ -3,7 +3,7 @@ from typing import Optional
 from datetime import datetime
 
 from src.scrapers.base_scraper import BaseScraper
-from src.core.job import Job, JobSource, ApplicationType
+from src.core.job import Job, JobSource
 from src.classifiers.detector import detect_application_type
 
 
@@ -81,7 +81,7 @@ class SimplifyScraper(BaseScraper):
             if date_str:
                 try:
                     posted_date = datetime.strptime(date_str, "%Y-%m-%d")
-                except:
+                except ValueError:
                     pass
             
             return Job(
