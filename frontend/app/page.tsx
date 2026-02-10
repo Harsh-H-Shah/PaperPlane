@@ -7,8 +7,8 @@ import StatsCards from '@/components/StatsCards';
 import CombatHistoryEnhanced from '@/components/CombatHistoryEnhanced';
 import QuickActions from '@/components/QuickActions';
 import Footer from '@/components/Footer';
-import JobDetails from '@/components/JobDetails'; // NEW
-import ActivityFeed from '@/components/ActivityFeed'; // NEW
+import JobDetails from '@/components/JobDetails';
+import ActivityFeed from '@/components/ActivityFeed';
 import { api, Profile, Gamification, Stats, CombatHistoryItem, Job } from '@/lib/api';
 
 export default function Dashboard() {
@@ -16,7 +16,7 @@ export default function Dashboard() {
   const [gamification, setGamification] = useState<Gamification | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [history, setHistory] = useState<CombatHistoryItem[]>([]);
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null); // NEW
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [isDeploying, setIsDeploying] = useState(false);
   const [isScraping, setIsScraping] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
@@ -35,7 +35,7 @@ export default function Dashboard() {
         api.getStats(),
         api.getCombatHistory(),
       ]);
-      
+
       setProfile(profileData);
       setGamification(gamData);
       setStats(statsData);
@@ -118,8 +118,6 @@ export default function Dashboard() {
     setIsApplying(true);
     try {
       await api.triggerRun();
-      // We keep the "Applying" state for a moment to show feedback
-      // The actual progress will be visible in the Activity Feed
       setTimeout(() => {
         setIsApplying(false);
         fetchData();
@@ -131,19 +129,8 @@ export default function Dashboard() {
   };
 
   const handleViewJob = async (jobId: string) => {
-    // We need to fetch the full job details because history item might not have everything
-    // Or we can just try to find it in history if it's there?
-    // Actually, let's fetch it.
     try {
-       // Assuming getJobs can fetch single or we filter. 
-       // Currently api.getJobs returns list. We don't have getJob(id).
-       // Use window.open for now if we can't fetch.
-       // But wait, user specifically asked for "frontend instead of just backend".
-       // I should implement api.getJob(id).
-       // Or I can cheat and pass the partial job from history if CombatHistoryItem has enough info.
-       // It has title, company, status, date. Missing URL, type, etc.
-       // Let's add getJob to API client or fetch from list.
-       const res = await api.getJobs({ per_page: 50 }); // Inefficient but works for demo
+       const res = await api.getJobs({ per_page: 50 });
        const job = res.jobs.find(j => j.id === jobId);
        if (job) setSelectedJob(job);
     } catch (e) {
@@ -194,12 +181,12 @@ export default function Dashboard() {
       <div className="flex-1 flex flex-col">
         <main className="flex-1 p-8 overflow-auto">
           {error ? (
-            <div className="tech-border bg-[var(--valo-red)] bg-opacity-20 rounded-lg p-6 text-center animate-in fade-in">
+            <div className="glass-card bg-[var(--valo-red)]/10 p-6 text-center animate-in fade-in" data-gsap="scale-in">
               <div className="text-xl font-semibold text-[var(--valo-red)] mb-2">⚠️ CONNECTION ERROR</div>
               <p className="text-[var(--valo-text-dim)]">{error}</p>
-              <button 
+              <button
                 onClick={fetchData}
-                className="mt-4 px-6 py-2 bg-[var(--valo-red)] text-white rounded hover:opacity-80 transition active:scale-95"
+                className="mt-4 px-6 py-2 bg-[var(--valo-red)] text-white hover:opacity-80 hover:shadow-[0_0_20px_rgba(255,70,85,0.3)] transition-all active:scale-95"
               >
                 Retry Connection
               </button>
@@ -228,7 +215,7 @@ export default function Dashboard() {
                 streak={gamification?.streak || 0}
               />
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6" data-gsap="stagger">
                  <ActivityFeed />
                  <CombatHistoryEnhanced
                     history={history}
@@ -240,29 +227,29 @@ export default function Dashboard() {
             </>
           )}
         </main>
-        
+
 
         {/* Job Details Modal */}
         {selectedJob && (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 animate-in fade-in p-4" onClick={() => setSelectedJob(null)}>
-            <div className="max-w-4xl w-full tech-border bg-[var(--valo-dark)] shadow-[0_0_50px_rgba(0,0,0,0.8)] relative" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in p-4" onClick={() => setSelectedJob(null)}>
+            <div className="max-w-4xl w-full glass-card bg-[var(--valo-dark)] shadow-[0_0_60px_rgba(0,0,0,0.8)] relative" onClick={e => e.stopPropagation()}>
                <div className="flex items-center justify-between p-4 border-b border-white/10">
                   <h2 className="font-display text-2xl font-bold tracking-wider">{selectedJob.title}</h2>
-                  <button onClick={() => setSelectedJob(null)} className="text-[var(--valo-text-dim)] hover:text-white">
+                  <button onClick={() => setSelectedJob(null)} className="text-[var(--valo-text-dim)] hover:text-white transition-colors">
                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
                </div>
-               <JobDetails 
+               <JobDetails
                  job={selectedJob}
                  onApply={handleApplyJob}
                  onMarkApplied={handleMarkApplied}
                  onUndo={handleUndo}
-                 onDelete={() => {}} // No delete from view modal usually
+                 onDelete={() => {}}
                />
             </div>
           </div>
         )}
-        
+
         <Footer />
       </div>
     </div>

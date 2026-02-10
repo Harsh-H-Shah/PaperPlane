@@ -100,23 +100,23 @@ interface SidebarProps {
   isDeploying?: boolean;
 }
 
- 
-export default function Sidebar({ 
-  agentName, 
-  userName, 
+
+export default function Sidebar({
+  agentName,
+  userName,
   valorantAgent = 'jett',
-  levelTitle, 
-  level, 
+  levelTitle,
+  level,
   rankIcon,
-  onDeploy, 
-  isDeploying 
+  onDeploy,
+  isDeploying
 }: SidebarProps) {
   const pathname = usePathname();
   const { isAdmin, login, logout } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginToken, setLoginToken] = useState('');
   const [loginError, setLoginError] = useState('');
-  
+
   const agent = VALORANT_AGENTS[valorantAgent.toLowerCase()] || VALORANT_AGENTS.jett;
 
   const handleLogin = async () => {
@@ -132,54 +132,53 @@ export default function Sidebar({
 
   return (
     <>
-    <aside className="w-64 min-h-screen bg-[var(--valo-dark)] border-r border-[var(--valo-gray-light)] flex flex-col">
+    <aside className="w-64 min-h-screen bg-[var(--valo-dark)]/90 backdrop-blur-xl border-r border-[var(--valo-gray-light)]/50 flex flex-col sidebar-glow-edge relative">
       {/* Logo */}
-      <div className="p-4 border-b border-[var(--valo-gray-light)]">
+      <div className="p-4 border-b border-[var(--valo-gray-light)]/50">
         <div className="flex items-center gap-2 p-2 tech-button">
-          <img 
-            src="/logo.png" 
-            alt="PaperPlane" 
+          <img
+            src="/logo.png"
+            alt="PaperPlane"
             className="w-8 h-8 object-contain"
           />
-          <span className="font-display text-2xl font-bold tracking-tighter text-[var(--valo-red)]">
+          <span className="font-display text-2xl font-bold tracking-tighter logo-gradient-text drop-shadow-[0_0_10px_rgba(0,217,255,0.3)]">
             PAPERPLANE
           </span>
         </div>
       </div>
 
       {/* User Profile */}
-      <Link href="/profile" className="block p-4 border-b border-[var(--valo-gray-light)] hover:bg-transparent">
+      <Link href="/profile" className="block p-4 border-b border-[var(--valo-gray-light)]/50 hover:bg-transparent">
         <div className="flex flex-col items-center p-4 tech-button hover:bg-[var(--valo-dark)]/50 transition-colors">
           {/* Valorant Agent Avatar */}
           <div className="relative mb-3">
-            <div 
+            <div
               className="w-20 h-20 overflow-hidden transition-all duration-300 hover:scale-110"
-              style={{ 
+              style={{
                 border: `2px solid ${agent.color}`,
-                boxShadow: `0 0 20px ${agent.color}40`,
+                boxShadow: `0 0 20px ${agent.color}40, 0 0 40px ${agent.color}15`,
                 clipPath: 'polygon(20% 0, 100% 0, 100% 80%, 80% 100%, 0 100%, 0 20%)'
               }}
             >
-              <img 
+              <img
                 key={agent.name}
-                src={agent.icon} 
+                src={agent.icon}
                 alt={agent.name}
                 className="w-full h-full object-cover bg-[var(--valo-darker)]"
                 onError={(e) => {
-                  // Fallback to emoji if image fails
                   e.currentTarget.style.display = 'none';
                 }}
               />
             </div>
             {/* Rank Badge */}
-            <div 
+            <div
               className="absolute -bottom-2 -right-2 w-10 h-10 flex items-center justify-center bg-[var(--valo-dark)] border border-[var(--valo-gold)] overflow-hidden shadow-lg"
               style={{ clipPath: 'polygon(50% 0, 100% 50%, 50% 100%, 0 50%)' }}
             >
               {rankIcon ? (
-                <img 
-                  src={rankIcon} 
-                  alt="Rank" 
+                <img
+                  src={rankIcon}
+                  alt="Rank"
                   className="w-full h-full object-contain p-1"
                 />
               ) : (
@@ -187,20 +186,20 @@ export default function Sidebar({
               )}
             </div>
           </div>
-          
+
           {/* User's Real Name */}
           <h2 className="font-display text-xl font-bold tracking-wider text-[var(--valo-text)] text-center">
             {userName || agentName}
           </h2>
-          
+
           {/* Agent Title */}
-          <p 
-            className="text-sm font-semibold tracking-wide"
+          <p
+            className="text-sm font-semibold tracking-wide drop-shadow-[0_0_8px_currentColor]"
             style={{ color: agent.color }}
           >
             {levelTitle}
           </p>
-          
+
           {/* Valorant Agent Name */}
           <p className="text-xs text-[var(--valo-text-dim)] mt-1 uppercase tracking-widest">
             {agent.name} MAIN
@@ -217,14 +216,17 @@ export default function Sidebar({
               <li key={item.name}>
                 <Link
                   href={item.href}
-                  className={`flex items-center gap-3 px-4 py-3 transition-all duration-200 tech-button ${
+                  className={`flex items-center gap-3 px-4 py-3 transition-all duration-300 tech-button ${
                     isActive
-                      ? 'active text-[var(--valo-red)]'
+                      ? 'active text-[var(--valo-red)] shadow-[inset_0_0_20px_rgba(255,70,85,0.1)]'
                       : 'text-[var(--valo-text-dim)] hover:text-[var(--valo-text)]'
                   }`}
                 >
                   {item.icon}
                   <span className="font-semibold tracking-wide">{item.name}</span>
+                  {isActive && (
+                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--valo-red)] energy-pulse-red" />
+                  )}
                 </Link>
               </li>
             );
@@ -237,12 +239,12 @@ export default function Sidebar({
         <button
           onClick={onDeploy}
           disabled={isDeploying || !isAdmin}
-          className={`w-full py-4 font-display font-bold tracking-wider text-lg transition-all duration-200 flex items-center justify-center gap-2 tech-button-solid ${
+          className={`w-full py-4 font-display font-bold tracking-wider text-lg transition-all duration-300 flex items-center justify-center gap-2 tech-button-solid ${
             !isAdmin
               ? 'bg-[var(--valo-gray)] text-[var(--valo-text-dim)] cursor-not-allowed'
               : isDeploying
                 ? 'bg-[var(--valo-gray)] text-[var(--valo-text-dim)] cursor-not-allowed'
-                : 'bg-[var(--valo-red)] text-white hover:shadow-[0_0_30px_rgba(255,70,85,0.5)] active:scale-95'
+                : 'bg-[var(--valo-red)] text-white hover:shadow-[0_0_40px_rgba(255,70,85,0.5)] active:scale-95'
           }`}
         >
           {!isAdmin ? (
@@ -298,8 +300,8 @@ export default function Sidebar({
 
     {/* Login Modal */}
     {showLoginModal && (
-      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 animate-in fade-in">
-        <div className="tech-border bg-[var(--valo-gray)] rounded-lg p-6 max-w-sm mx-4 w-full animate-in zoom-in-95">
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in">
+        <div className="glass-card bg-[var(--valo-gray)] p-6 max-w-sm mx-4 w-full animate-in zoom-in-95">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-lg bg-[var(--valo-cyan)]/20 flex items-center justify-center">
               <svg className="w-5 h-5 text-[var(--valo-cyan)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -316,7 +318,7 @@ export default function Sidebar({
             onChange={(e) => setLoginToken(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
             placeholder="Enter admin token"
-            className="w-full px-4 py-3 bg-[var(--valo-dark)] border border-[var(--valo-gray-light)] rounded-lg text-[var(--valo-text)] placeholder-[var(--valo-text-dim)] focus:border-[var(--valo-cyan)] focus:outline-none transition-colors mb-3 font-mono text-sm"
+            className="w-full px-4 py-3 bg-[var(--valo-dark)] border border-[var(--valo-gray-light)] text-[var(--valo-text)] placeholder-[var(--valo-text-dim)] focus:border-[var(--valo-cyan)] focus:outline-none focus:shadow-[0_0_15px_rgba(0,217,255,0.15)] transition-all mb-3 font-mono text-sm"
             autoFocus
           />
           {loginError && (
@@ -325,13 +327,13 @@ export default function Sidebar({
           <div className="flex gap-3">
             <button
               onClick={() => { setShowLoginModal(false); setLoginToken(''); setLoginError(''); }}
-              className="flex-1 py-2.5 rounded-lg bg-[var(--valo-gray-light)] text-[var(--valo-text)] font-semibold text-sm hover:bg-opacity-80 transition-all"
+              className="flex-1 py-2.5 bg-[var(--valo-gray-light)] text-[var(--valo-text)] font-semibold text-sm hover:bg-opacity-80 transition-all"
             >
               CANCEL
             </button>
             <button
               onClick={handleLogin}
-              className="flex-1 py-2.5 rounded-lg bg-[var(--valo-cyan)] text-[var(--valo-dark)] font-semibold text-sm hover:shadow-[0_0_15px_rgba(0,255,255,0.4)] transition-all"
+              className="flex-1 py-2.5 bg-[var(--valo-cyan)] text-[var(--valo-dark)] font-semibold text-sm hover:shadow-[0_0_20px_rgba(0,255,255,0.4)] transition-all"
             >
               LOGIN
             </button>

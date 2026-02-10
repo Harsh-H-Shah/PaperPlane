@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { AuthProvider } from '@/lib/auth';
 import LoadingScreen from '@/components/LoadingScreen';
+import { useGsapScroll, useParallax } from '@/lib/useGsapScroll';
 
 export default function ClientLayout({
   children,
@@ -17,10 +18,15 @@ export default function ClientLayout({
     setReady(true);
   }, []);
 
+  // Initialize GSAP scroll animations globally
+  useGsapScroll();
+  // Initialize parallax background effect
+  useParallax();
+
   return (
     <AuthProvider>
       {showLoading && <LoadingScreen onComplete={handleComplete} />}
-      <div style={{ opacity: ready ? 1 : 0, transition: 'opacity 0.3s ease' }}>
+      <div style={{ opacity: ready ? 1 : 0, transition: 'opacity 0.5s ease' }}>
         {children}
       </div>
     </AuthProvider>

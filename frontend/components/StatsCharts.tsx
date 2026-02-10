@@ -1,6 +1,6 @@
 'use client';
 
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Area, AreaChart } from 'recharts';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 
 interface StatsChartsProps {
   bySource: Record<string, number>;
@@ -27,7 +27,7 @@ export default function StatsCharts({ bySource, applied, pending, failed, total,
     .sort((a, b) => b.value - a.value)
     .slice(0, 6); // Top 6 sources
 
-  // Use provided weekly data or fallback to empty array (should be handled by loading state in parent)
+  // Use provided weekly data or fallback
   const weeklyData = weeklyActivity || [
     { day: 'Mon', applications: 0 },
     { day: 'Tue', applications: 0 },
@@ -41,8 +41,9 @@ export default function StatsCharts({ bySource, applied, pending, failed, total,
   return (
     <div className="grid grid-cols-2 gap-6 mb-6">
       {/* Status Distribution */}
-      <div className="tech-border bg-[var(--valo-gray)] rounded-lg p-5">
-        <h4 className="font-display text-lg font-bold text-[var(--valo-text)] mb-4">
+      <div className="glass-card p-5" data-gsap="fade-up">
+        <h4 className="font-display text-lg font-bold text-[var(--valo-text)] mb-4 flex items-center gap-2">
+          <span className="w-1.5 h-4 bg-[var(--valo-green)] rounded-full" />
           MISSION STATUS
         </h4>
         <div className="h-48">
@@ -63,10 +64,12 @@ export default function StatsCharts({ bySource, applied, pending, failed, total,
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1F2937',
-                  border: '1px solid #374151',
-                  borderRadius: '8px',
+                  backgroundColor: 'rgba(15, 25, 35, 0.9)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '0',
                   color: '#ECE8E1',
+                  clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%)',
                 }}
               />
             </PieChart>
@@ -76,7 +79,10 @@ export default function StatsCharts({ bySource, applied, pending, failed, total,
         <div className="flex justify-center gap-4 mt-2">
           {statusData.map((entry) => (
             <div key={entry.name} className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: entry.color, boxShadow: `0 0 8px ${entry.color}40` }}
+              />
               <span className="text-xs text-[var(--valo-text-dim)]">
                 {entry.name}: {entry.value}
               </span>
@@ -86,8 +92,9 @@ export default function StatsCharts({ bySource, applied, pending, failed, total,
       </div>
 
       {/* Sources Bar Chart */}
-      <div className="tech-border bg-[var(--valo-gray)] rounded-lg p-5">
-        <h4 className="font-display text-lg font-bold text-[var(--valo-text)] mb-4">
+      <div className="glass-card p-5" data-gsap="fade-up" data-gsap-delay="0.1">
+        <h4 className="font-display text-lg font-bold text-[var(--valo-text)] mb-4 flex items-center gap-2">
+          <span className="w-1.5 h-4 bg-[var(--valo-cyan)] rounded-full" />
           INTEL SOURCES
         </h4>
         <div className="h-48">
@@ -97,10 +104,12 @@ export default function StatsCharts({ bySource, applied, pending, failed, total,
               <YAxis type="category" dataKey="name" stroke="#8A8F98" fontSize={10} width={60} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1F2937',
-                  border: '1px solid #374151',
-                  borderRadius: '8px',
+                  backgroundColor: 'rgba(15, 25, 35, 0.9)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '0',
                   color: '#ECE8E1',
+                  clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%)',
                 }}
               />
               <Bar dataKey="value" fill="#00D9FF" radius={[0, 4, 4, 0]}>
@@ -114,8 +123,9 @@ export default function StatsCharts({ bySource, applied, pending, failed, total,
       </div>
 
       {/* Weekly Activity */}
-      <div className="tech-border bg-[var(--valo-gray)] rounded-lg p-5 col-span-2">
-        <h4 className="font-display text-lg font-bold text-[var(--valo-text)] mb-4">
+      <div className="glass-card p-5 col-span-2" data-gsap="fade-up" data-gsap-delay="0.2">
+        <h4 className="font-display text-lg font-bold text-[var(--valo-text)] mb-4 flex items-center gap-2">
+          <span className="w-1.5 h-4 bg-[var(--valo-yellow)] rounded-full" />
           WEEKLY ACTIVITY
         </h4>
         <div className="h-32">
@@ -123,7 +133,7 @@ export default function StatsCharts({ bySource, applied, pending, failed, total,
             <AreaChart data={weeklyData}>
               <defs>
                 <linearGradient id="colorApps" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#00FFA3" stopOpacity={0.3}/>
+                  <stop offset="5%" stopColor="#00FFA3" stopOpacity={0.4}/>
                   <stop offset="95%" stopColor="#00FFA3" stopOpacity={0}/>
                 </linearGradient>
               </defs>
@@ -131,10 +141,12 @@ export default function StatsCharts({ bySource, applied, pending, failed, total,
               <YAxis stroke="#8A8F98" fontSize={10} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1F2937',
-                  border: '1px solid #374151',
-                  borderRadius: '8px',
+                  backgroundColor: 'rgba(15, 25, 35, 0.9)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '0',
                   color: '#ECE8E1',
+                  clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%)',
                 }}
               />
               <Area

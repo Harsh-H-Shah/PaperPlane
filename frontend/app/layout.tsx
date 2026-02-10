@@ -19,13 +19,29 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${teko.variable} ${rajdhani.variable} antialiased min-h-screen relative`}>
-        {/* Map Background */}
-        <div 
-          className="fixed inset-0 z-[-1] bg-cover bg-center bg-no-repeat opacity-40 grayscale-[30%]"
-          style={{ backgroundImage: "url('https://media.valorant-api.com/maps/7eaecc1b-4337-bbf6-6ab9-04b8f06b3319/splash.png')" }}
-        />
-        <div className="fixed inset-0 z-[-1] bg-gradient-to-b from-black/60 via-[var(--valo-darker)]/70 to-black/90" />
-        
+        {/* Parallax Background System */}
+        <div className="parallax-bg">
+          {/* Layer 1: Valorant map — moves slowest */}
+          <div
+            data-parallax
+            data-parallax-speed="0.3"
+            className="parallax-layer parallax-map"
+            style={{ backgroundImage: "url('https://media.valorant-api.com/maps/7eaecc1b-4337-bbf6-6ab9-04b8f06b3319/splash.png')" }}
+          />
+          {/* Layer 2: Grid pattern — moves at medium speed */}
+          <div
+            data-parallax
+            data-parallax-speed="0.6"
+            className="parallax-layer parallax-grid"
+          />
+          {/* Layer 3: Gradient overlay with ambient glow — does not move */}
+          <div className="parallax-layer parallax-overlay" />
+        </div>
+
+        {/* Ambient glow spots for energy feel */}
+        <div className="ambient-glow" style={{ top: '10%', left: '15%', background: 'rgba(0, 217, 255, 0.08)' }} />
+        <div className="ambient-glow" style={{ bottom: '20%', right: '10%', background: 'rgba(255, 70, 85, 0.06)', animationDelay: '4s' }} />
+
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
