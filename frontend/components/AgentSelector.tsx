@@ -46,11 +46,15 @@ export default function AgentSelector({ selectedAgent, onSelectToken, disabled }
   }, [emblaApi, onSelect]);
 
   const handleAgentClick = (index: number, key: string) => {
-    if (disabled) return;
-    if (index === selectedIndex) {
-        // Already selected
-    } else {
-        emblaApi?.scrollTo(index);
+    // When disabled (not admin or saving), still call onSelectToken so the parent
+    // can surface an error toast — but skip the optimistic scroll, so the carousel
+    // doesn't visually drift away from the actual saved selection.
+    if (disabled) {
+      onSelectToken(key);
+      return;
+    }
+    if (index !== selectedIndex) {
+      emblaApi?.scrollTo(index);
     }
     onSelectToken(key);
   };
@@ -77,39 +81,31 @@ export default function AgentSelector({ selectedAgent, onSelectToken, disabled }
         <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
       </button>
 
-      <div className="overflow-hidden cursor-grab active:cursor-grabbing" ref={emblaRef}>
-        <div className="flex touch-pan-y" style={{ marginLeft: '-12rem' /* Adjusted offset for visual center */ }}> 
+      <div className={`overflow-hidden ${disabled ? 'cursor-not-allowed opacity-80' : 'cursor-grab active:cursor-grabbing'}`} ref={emblaRef}>
+        <div className="flex touch-pan-y">
            {agentsList.map(([key, agent], index) => {
               const isSelected = index === selectedIndex;
-              const CARD_WIDTH = 200; // Increased back slightly
-  const GAP = 8; 
-  const ITEM_SIZE = CARD_WIDTH + GAP;       return (
-                <div 
-                    key={key} 
-                    className="flex-[0_0_auto] min-w-0 pl-16 relative py-4" /* Reduced spacing */
+              return (
+                <div
+                    key={key}
+                    className="flex-[0_0_auto] min-w-0 pl-4 sm:pl-8 md:pl-12 relative py-4"
                 >
                    <motion.div
                       layout
                       onClick={() => handleAgentClick(index, key)}
                       animate={{
-                         scale: isSelected ? 1.05 : 0.85, 
+                         scale: isSelected ? 1.05 : 0.85,
                          opacity: isSelected ? 1 : 0.5,
                          zIndex: isSelected ? 50 : 1,
                          y: isSelected ? 0 : 20,
                          filter: isSelected ? 'grayscale(0)' : 'grayscale(0%) brightness(0.7)'
                       }}
-                      transition={{ 
-                        type: "spring", 
-                        stiffness: 300, 
-                        damping: 30 
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 30
                       }}
-                      className={`
-                        relative w-48 h-72 cursor-pointer 
-                        transform transition-all
-                      `} // Increased base size (w-48 h-72)
-                      style={{
-                        height: 340, // Increased height
-                      }}
+                      className={`relative w-32 sm:w-40 md:w-48 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'} transform transition-all h-[220px] sm:h-[280px] md:h-[340px]`}
                    >
                         {/* Card Container */}
                         <div
@@ -176,8 +172,8 @@ export default function AgentSelector({ selectedAgent, onSelectToken, disabled }
       </div>
       
        {/* Fade Sides */}
-       <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-[var(--valo-darker)] via-[var(--valo-darker)]/80 to-transparent pointer-events-none z-10" />
-       <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-[var(--valo-darker)] via-[var(--valo-darker)]/80 to-transparent pointer-events-none z-10" />
+       <div className="absolute left-0 top-0 bottom-0 w-12 sm:w-20 md:w-32 bg-gradient-to-r from-[var(--valo-darker)] via-[var(--valo-darker)]/80 to-transparent pointer-events-none z-10" />
+       <div className="absolute right-0 top-0 bottom-0 w-12 sm:w-20 md:w-32 bg-gradient-to-l from-[var(--valo-darker)] via-[var(--valo-darker)]/80 to-transparent pointer-events-none z-10" />
     </div>
   );
 }
