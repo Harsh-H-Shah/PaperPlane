@@ -78,41 +78,41 @@ export default function LevelProgress({
     : ((currentMilestoneIdx) / (MILESTONE_TIERS.length)) * 100;
 
   return (
-    <div className="glass-card p-6 mb-6" data-gsap="fade-up">
-      <h3 className="font-display text-xl font-bold tracking-wider vibrant-text mb-4 inline-block">
+    <div className="glass-card p-4 sm:p-6 mb-6" data-gsap="fade-up">
+      <h3 className="font-display text-lg sm:text-xl font-bold tracking-wider vibrant-text mb-4 inline-block">
         RANK PROGRESSION
       </h3>
 
       {/* Current Rank Display */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3 sm:gap-4">
           {/* Rank Icon from Valorant API */}
           <div
-            className="w-16 h-16 rounded-lg bg-[var(--valo-darker)] flex items-center justify-center border-2 relative overflow-hidden"
+            className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg bg-[var(--valo-darker)] flex items-center justify-center border-2 relative overflow-hidden flex-shrink-0"
             style={{ borderColor: currentColor, boxShadow: `0 0 20px ${currentColor}40` }}
           >
             {rankIcon ? (
-              <img src={rankIcon} alt={levelTitle} className="w-12 h-12 object-contain" />
+              <img src={rankIcon} alt={levelTitle} className="w-10 h-10 sm:w-12 sm:h-12 object-contain" />
             ) : (
-              <div className="text-2xl font-bold font-display" style={{ color: currentColor }}>
+              <div className="text-xl sm:text-2xl font-bold font-display" style={{ color: currentColor }}>
                 {currentLevel}
               </div>
             )}
           </div>
-          <div>
-            <div className="font-display text-2xl font-bold" style={{ color: currentColor, textShadow: `0 0 10px ${currentColor}40` }}>
+          <div className="min-w-0">
+            <div className="font-display text-xl sm:text-2xl font-bold truncate" style={{ color: currentColor, textShadow: `0 0 10px ${currentColor}40` }}>
               {levelTitle}
             </div>
-            <div className="text-sm text-[var(--valo-text-dim)]">
+            <div className="text-xs sm:text-sm text-[var(--valo-text-dim)]">
               Tier {currentLevel} · {getDivision(currentLevel)}
             </div>
           </div>
         </div>
-        <div className="text-right">
-          <div className="font-display text-3xl font-bold text-[var(--valo-cyan)] drop-shadow-[0_0_10px_rgba(0,217,255,0.3)]">
+        <div className="sm:text-right">
+          <div className="font-display text-2xl sm:text-3xl font-bold text-[var(--valo-cyan)] drop-shadow-[0_0_10px_rgba(0,217,255,0.3)]">
             {totalXp.toLocaleString()} XP
           </div>
-          <div className="text-sm text-[var(--valo-text-dim)]">
+          <div className="text-xs sm:text-sm text-[var(--valo-text-dim)]">
             {currentXpInLevel} / {xpForNextLevel} RR to rank up
           </div>
         </div>
@@ -151,8 +151,8 @@ export default function LevelProgress({
       </div>
 
       {/* Rank Milestone Map */}
-      <div className="relative">
-        <div className="flex justify-between relative z-10">
+      <div className="relative overflow-x-auto -mx-1 px-1 pb-1">
+        <div className="flex justify-between gap-1 sm:gap-2 relative z-10 min-w-[320px]">
           {MILESTONE_TIERS.map((tier) => {
             const isCompleted = currentLevel >= tier;
             const isCurrent = currentLevel >= tier && (

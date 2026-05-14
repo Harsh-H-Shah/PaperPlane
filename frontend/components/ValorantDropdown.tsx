@@ -61,7 +61,7 @@ export default function ValorantDropdown({ options, value, onChange, placeholder
   }, [isOpen]);
 
   return (
-    <div className={`relative min-w-[200px] ${className} ${isOpen ? 'z-[99]' : 'z-auto'}`} ref={containerRef}>
+    <div className={`relative w-full sm:min-w-[200px] ${className} ${isOpen ? 'z-[99]' : 'z-auto'}`} ref={containerRef}>
       {/* Trigger Button */}
       <button
         type="button"

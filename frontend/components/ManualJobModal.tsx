@@ -85,13 +85,13 @@ export default function ManualJobModal({ isOpen, onClose, onSubmit }: ManualJobM
       >
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[var(--valo-cyan)] to-transparent opacity-50" />
         
-        <form onSubmit={handleSubmit} className="p-8 overflow-visible">
-          <header className="mb-8">
+        <form onSubmit={handleSubmit} className="p-5 sm:p-8 overflow-visible max-h-[90vh] overflow-y-auto">
+          <header className="mb-6 sm:mb-8">
             <div className="flex items-center gap-2 text-[var(--valo-cyan)] text-xs font-bold tracking-widest mb-1">
               <span className="w-2 h-2 bg-[var(--valo-cyan)] rounded-full animate-pulse" />
               NEW INTEL
             </div>
-            <h2 className="font-display text-3xl font-bold text-[var(--valo-text)] tracking-wider">MANUAL MISSION ENTRY</h2>
+            <h2 className="font-display text-2xl sm:text-3xl font-bold text-[var(--valo-text)] tracking-wider">MANUAL MISSION ENTRY</h2>
           </header>
 
           <div className="space-y-6">
@@ -134,7 +134,7 @@ export default function ManualJobModal({ isOpen, onClose, onSubmit }: ManualJobM
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4 relative z-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10">
               <div>
                 <label className={labelClasses}>Location</label>
                 <input 
@@ -158,11 +158,11 @@ export default function ManualJobModal({ isOpen, onClose, onSubmit }: ManualJobM
             </div>
           </div>
 
-          <footer className="mt-10 flex justify-end gap-4">
+          <footer className="mt-8 sm:mt-10 flex flex-col sm:flex-row sm:justify-end gap-3 sm:gap-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-8 py-3 text-xs font-bold tracking-widest text-[var(--valo-text-dim)] hover:text-white transition-colors"
+              className="order-2 sm:order-1 px-6 sm:px-8 py-3 text-xs font-bold tracking-widest text-[var(--valo-text-dim)] hover:text-white transition-colors"
             >
               ABORT
             </button>
@@ -170,7 +170,7 @@ export default function ManualJobModal({ isOpen, onClose, onSubmit }: ManualJobM
               type="submit"
               disabled={isSubmitting}
               className={`
-                px-10 py-3 bg-[var(--valo-cyan)] text-black font-bold tracking-widest text-xs
+                order-1 sm:order-2 px-8 sm:px-10 py-3 bg-[var(--valo-cyan)] text-black font-bold tracking-widest text-xs
                 transition-all transform active:scale-95 shadow-[0_0_20px_rgba(0,255,255,0.2)]
                 hover:shadow-[0_0_30px_rgba(0,255,255,0.4)] hover:bg-cyan-400
                 disabled:opacity-50 disabled:cursor-not-allowed

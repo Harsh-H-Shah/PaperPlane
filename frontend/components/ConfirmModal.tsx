@@ -47,17 +47,17 @@ export default function ConfirmModal({
         {/* Header decoration */}
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[var(--valo-red)] to-transparent opacity-50" />
         
-        <div className="p-6">
-          <h3 className="font-display text-2xl font-bold text-[var(--valo-text)] mb-2 flex items-center gap-2">
+        <div className="p-5 sm:p-6">
+          <h3 className="font-display text-xl sm:text-2xl font-bold text-[var(--valo-text)] mb-2 flex items-center gap-2">
             {isDestructive && <span className="text-[var(--valo-red)]">⚠️</span>}
             {title}
           </h3>
-          
-          <p className="text-[var(--valo-text-dim)] mb-8 leading-relaxed">
+
+          <p className="text-sm sm:text-base text-[var(--valo-text-dim)] mb-6 sm:mb-8 leading-relaxed">
             {message}
           </p>
 
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
             <button
               onClick={onCancel}
               className="px-6 py-2 rounded font-semibold text-[var(--valo-text-dim)] hover:text-[var(--valo-text)] hover:bg-[var(--valo-gray)] transition-colors"

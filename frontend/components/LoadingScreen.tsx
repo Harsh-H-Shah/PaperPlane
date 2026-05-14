@@ -167,7 +167,7 @@ export default function LoadingScreen({ onComplete }: { onComplete: () => void }
           bottom: 0;
           left: 0;
           right: 0;
-          padding: 24px 48px 32px;
+          padding: 20px clamp(16px, 5vw, 48px) 28px;
         }
 
         .loading-info {

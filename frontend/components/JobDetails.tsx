@@ -30,10 +30,10 @@ export default function JobDetails({
   const isInProgress = job.status === 'in_progress' || isDeploying;
   
   return (
-    <div className="px-6 pb-6 pt-0 border-t border-[var(--valo-gray-light)]/20 bg-[var(--valo-dark)]/30 animate-in slide-in-from-top-2">
+    <div className="px-4 sm:px-6 pb-6 pt-0 border-t border-[var(--valo-gray-light)]/20 bg-[var(--valo-dark)]/30 animate-in slide-in-from-top-2">
       <div className="pt-4">
         {/* Job Stats/Tags Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
            <div className="bg-[var(--valo-darker)] p-3 border border-white/5 relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-1 opacity-10 group-hover:opacity-20 transition-opacity">
                 <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8z"/></svg>
@@ -89,7 +89,7 @@ export default function JobDetails({
         </div>
         
         {/* Actions Bar */}
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-3">
           <a
             href={job.url}
             target="_blank"

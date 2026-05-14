@@ -75,25 +75,25 @@ export default function WeaponShowcase() {
   const [selectedWeapon, setSelectedWeapon] = useState(WEAPONS[4]); // Default to Vandal
 
   return (
-    <div className="glass-card p-6 relative overflow-hidden group" data-gsap="fade-up">
+    <div className="glass-card p-4 sm:p-6 relative overflow-hidden group" data-gsap="fade-up">
       {/* Header */}
-      <div className="flex justify-between items-end mb-6 border-b border-white/10 pb-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-4 sm:mb-6 border-b border-white/10 pb-4 gap-2">
         <div>
            <div className="text-[var(--valo-text-dim)] text-xs tracking-widest mb-1">BUY PHASE</div>
-           <h2 className="font-display text-3xl font-bold tracking-wider vibrant-text-fire inline-block">
+           <h2 className="font-display text-2xl sm:text-3xl font-bold tracking-wider vibrant-text-fire inline-block">
              LOADOUT
            </h2>
         </div>
-        <div className="text-right">
-             <div className="text-[var(--valo-green)] font-mono text-xl drop-shadow-[0_0_10px_rgba(0,255,163,0.3)]">
+        <div className="sm:text-right">
+             <div className="text-[var(--valo-green)] font-mono text-base sm:text-xl drop-shadow-[0_0_10px_rgba(0,255,163,0.3)]">
                 CREDITS: <span className="font-bold">∞</span>
              </div>
         </div>
       </div>
 
-      <div className="flex gap-8">
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
         {/* Left: Weapon Grid (Buy Menu Style) */}
-        <div className="flex-1 grid grid-cols-2 gap-4">
+        <div className="flex-1 grid grid-cols-2 gap-3 sm:gap-4 min-w-0">
            {['SIDEARM', 'SMG', 'RIFLE', 'SNIPER'].map(category => (
               <div key={category} className="space-y-2">
                  <div className="text-[10px] text-[var(--valo-text-dim)] font-bold mb-2">{category}</div>
@@ -130,7 +130,7 @@ export default function WeaponShowcase() {
         </div>
 
         {/* Right: Selected Weapon Detail */}
-        <div className="w-1/3 bg-[var(--valo-dark)]/80 backdrop-blur-md border border-white/5 p-6 relative flex flex-col items-center text-center">
+        <div className="w-full lg:w-1/3 bg-[var(--valo-dark)]/80 backdrop-blur-md border border-white/5 p-4 sm:p-6 relative flex flex-col items-center text-center">
             {/* Background energy pulse */}
             <div
               className="absolute inset-0 opacity-10 pointer-events-none"
