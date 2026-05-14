@@ -707,10 +707,6 @@ body {
 /* ==========================================
    SIDEBAR GRADIENT EDGE
    ========================================== */
-.sidebar-glow-edge {
-  position: relative;
-}
-
 .sidebar-glow-edge::after {
   content: '';
   position: absolute;

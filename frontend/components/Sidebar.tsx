@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
@@ -116,6 +116,19 @@ export default function Sidebar({
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginToken, setLoginToken] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  // Close drawer when route changes
+  useEffect(() => {
+    setIsMobileOpen(false);
+  }, [pathname]);
+
+  // Lock body scroll while mobile drawer is open
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.body.style.overflow = isMobileOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [isMobileOpen]);
 
   const agent = VALORANT_AGENTS[valorantAgent.toLowerCase()] || VALORANT_AGENTS.jett;
 
@@ -132,7 +145,45 @@ export default function Sidebar({
 
   return (
     <>
-    <aside className="w-64 min-h-screen bg-[var(--valo-dark)]/90 backdrop-blur-xl border-r border-[var(--valo-gray-light)]/50 flex flex-col sidebar-glow-edge relative">
+    {/* Floating mobile hamburger button (only when drawer is closed) */}
+    {!isMobileOpen && (
+      <button
+        onClick={() => setIsMobileOpen(true)}
+        aria-label="Open navigation menu"
+        className="md:hidden fixed top-3 left-3 z-30 w-10 h-10 flex items-center justify-center bg-[var(--valo-dark)]/90 backdrop-blur-md border border-[var(--valo-gray-light)]/60 text-[var(--valo-text)] hover:text-[var(--valo-red)] hover:border-[var(--valo-red)]/50 shadow-lg shadow-black/40 transition-colors"
+        style={{ clipPath: 'polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%)' }}
+      >
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+    )}
+
+    {/* Backdrop (mobile only, when drawer is open) */}
+    {isMobileOpen && (
+      <div
+        className="md:hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-40 animate-in fade-in"
+        onClick={() => setIsMobileOpen(false)}
+      />
+    )}
+
+    <aside
+      className={`w-72 md:w-64 bg-[var(--valo-dark)]/95 md:bg-[var(--valo-dark)]/90 backdrop-blur-xl border-r border-[var(--valo-gray-light)]/50 flex flex-col sidebar-glow-edge
+        fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-out overflow-y-auto
+        ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
+        md:relative md:translate-x-0 md:min-h-screen md:overflow-visible md:z-auto`}
+    >
+      {/* Mobile close button */}
+      <button
+        onClick={() => setIsMobileOpen(false)}
+        aria-label="Close navigation menu"
+        className="md:hidden absolute top-3 right-3 p-2 text-[var(--valo-text-dim)] hover:text-[var(--valo-red)] transition-colors z-10"
+      >
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
       {/* Logo */}
       <div className="p-4 border-b border-[var(--valo-gray-light)]/50">
         <div className="flex items-center gap-2 p-2 tech-button">
