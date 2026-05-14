@@ -58,12 +58,12 @@ export default function QuickActions({
         </div>
 
         {/* Main Action Buttons */}
-        <div className="grid grid-cols-2 gap-4 mb-4" data-gsap="stagger">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4" data-gsap="stagger">
           {/* Scan Jobs Button */}
           <button
             onClick={onScrape}
             disabled={isScraping || isApplying || !isAdmin}
-            className={`relative p-8 transition-all duration-300 flex flex-col items-center text-center overflow-hidden group tech-button ${
+            className={`relative p-5 sm:p-8 transition-all duration-300 flex flex-col items-center text-center overflow-hidden group tech-button ${
               !isAdmin
                 ? 'bg-[var(--valo-gray-light)] cursor-not-allowed opacity-60'
                 : isScraping
@@ -84,7 +84,7 @@ export default function QuickActions({
                )}
             </div>
 
-            <span className="font-display font-bold text-2xl tracking-widest text-[var(--valo-text)] group-hover:text-[var(--valo-cyan)] transition-colors">
+            <span className="font-display font-bold text-xl sm:text-2xl tracking-widest text-[var(--valo-text)] group-hover:text-[var(--valo-cyan)] transition-colors">
               {isScraping ? 'SCANNING...' : 'RECON'}
             </span>
             <span className="text-xs text-[var(--valo-text-dim)] uppercase tracking-wider mt-2 group-hover:text-[var(--valo-text)]">
@@ -96,7 +96,7 @@ export default function QuickActions({
           <button
             onClick={() => setShowConfirmApply(true)}
             disabled={isScraping || isApplying || !isAdmin}
-            className={`relative p-8 transition-all duration-300 flex flex-col items-center text-center overflow-hidden group tech-button ${
+            className={`relative p-5 sm:p-8 transition-all duration-300 flex flex-col items-center text-center overflow-hidden group tech-button ${
               !isAdmin
                 ? 'bg-[var(--valo-gray-light)] cursor-not-allowed opacity-60'
                 : isApplying
@@ -117,7 +117,7 @@ export default function QuickActions({
                )}
             </div>
 
-            <span className="font-display font-bold text-2xl tracking-widest text-[var(--valo-text)] group-hover:text-[var(--valo-green)] transition-colors">
+            <span className="font-display font-bold text-xl sm:text-2xl tracking-widest text-[var(--valo-text)] group-hover:text-[var(--valo-green)] transition-colors">
               {isApplying ? 'DEPLOYING...' : 'ENGAGE'}
             </span>
             <span className="text-xs text-[var(--valo-text-dim)] uppercase tracking-wider mt-2 group-hover:text-[var(--valo-text)]">

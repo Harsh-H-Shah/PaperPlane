@@ -39,7 +39,7 @@ export default function StatsCharts({ bySource, applied, pending, failed, total,
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-6 mb-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
       {/* Status Distribution */}
       <div className="glass-card p-5" data-gsap="fade-up">
         <h4 className="font-display text-lg font-bold text-[var(--valo-text)] mb-4 flex items-center gap-2">
@@ -123,7 +123,7 @@ export default function StatsCharts({ bySource, applied, pending, failed, total,
       </div>
 
       {/* Weekly Activity */}
-      <div className="glass-card p-5 col-span-2" data-gsap="fade-up" data-gsap-delay="0.2">
+      <div className="glass-card p-5 lg:col-span-2" data-gsap="fade-up" data-gsap-delay="0.2">
         <h4 className="font-display text-lg font-bold text-[var(--valo-text)] mb-4 flex items-center gap-2">
           <span className="w-1.5 h-4 bg-[var(--valo-yellow)] rounded-full" />
           WEEKLY ACTIVITY

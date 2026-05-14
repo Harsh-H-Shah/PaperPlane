@@ -42,7 +42,7 @@ export default function ActivityFeed() {
   }, [logs]);
 
   return (
-    <div className="h-[400px] flex flex-col tech-border overflow-hidden relative" data-gsap="fade-up">
+    <div className="h-[320px] md:h-[400px] flex flex-col tech-border overflow-hidden relative" data-gsap="fade-up">
       {/* Header */}
       <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between bg-black/40">
         <div className="flex items-center gap-2">

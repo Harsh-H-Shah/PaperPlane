@@ -25,38 +25,38 @@ const BoltIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
 
 export default function TacticalHeader({ streak, totalXp }: TacticalHeaderProps) {
   return (
-    <header className="glass-card p-6 mb-6" data-gsap="fade-up">
+    <header className="glass-card p-4 sm:p-6 mb-6" data-gsap="fade-up">
       {/* Accent line at top */}
       <div className="accent-line mb-4" />
 
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-[var(--valo-text-dim)] text-sm mb-1">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="pl-10 md:pl-0">
+          <div className="flex items-center gap-2 text-[var(--valo-text-dim)] text-xs sm:text-sm mb-1">
             <StatusDot />
             SYSTEM STATUS: ONLINE
           </div>
-          <h1 className="font-display text-4xl font-bold tracking-wider vibrant-text">
+          <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold tracking-wider vibrant-text">
             TACTICAL DASHBOARD
           </h1>
         </div>
 
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-6 sm:gap-8">
           {/* Streak Counter */}
-          <div className="text-right group cursor-default">
-            <div className="font-display text-3xl font-bold text-[var(--valo-cyan)] flex items-center gap-2 group-hover:drop-shadow-[0_0_12px_rgba(0,217,255,0.5)] transition-all">
+          <div className="text-left sm:text-right group cursor-default">
+            <div className="font-display text-2xl sm:text-3xl font-bold text-[var(--valo-cyan)] flex items-center gap-2 group-hover:drop-shadow-[0_0_12px_rgba(0,217,255,0.5)] transition-all">
               <span className="count-up">{streak.toString().padStart(2, '0')}</span>
-              <FlameIcon className="w-6 h-6" />
+              <FlameIcon className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <div className="text-xs text-[var(--valo-text-dim)] tracking-wider">OPERATION STREAK</div>
+            <div className="text-[10px] sm:text-xs text-[var(--valo-text-dim)] tracking-wider">OPERATION STREAK</div>
           </div>
 
           {/* XP Counter */}
-          <div className="text-right group cursor-default">
-            <div className="font-display text-3xl font-bold text-[var(--valo-green)] flex items-center gap-2 group-hover:drop-shadow-[0_0_12px_rgba(0,255,163,0.5)] transition-all">
+          <div className="text-left sm:text-right group cursor-default">
+            <div className="font-display text-2xl sm:text-3xl font-bold text-[var(--valo-green)] flex items-center gap-2 group-hover:drop-shadow-[0_0_12px_rgba(0,255,163,0.5)] transition-all">
               <span className="count-up">{totalXp.toLocaleString()}</span>
-              <BoltIcon className="w-6 h-6" />
+              <BoltIcon className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <div className="text-xs text-[var(--valo-text-dim)] tracking-wider">TOTAL RADIANT XP</div>
+            <div className="text-[10px] sm:text-xs text-[var(--valo-text-dim)] tracking-wider">TOTAL RADIANT XP</div>
           </div>
         </div>
       </div>

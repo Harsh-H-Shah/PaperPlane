@@ -74,19 +74,19 @@ function StatCard({ label, value, icon, color, colorName, sublabel, delay = 0 }:
 
   return (
     <div
-      className="gradient-card p-5 stat-card-glow cursor-default group"
+      className="gradient-card p-3 sm:p-5 stat-card-glow cursor-default group"
       style={{ borderColor: `${color}20` }}
       data-color={colorName}
       data-gsap="fade-up"
       data-gsap-delay={String(delay / 1000)}
     >
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="text-xs text-[var(--valo-text-dim)] tracking-wider mb-2 uppercase">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-[10px] sm:text-xs text-[var(--valo-text-dim)] tracking-wider mb-1 sm:mb-2 uppercase">
             {label}
           </div>
           <div
-            className="font-display text-4xl font-bold transition-all duration-300 group-hover:drop-shadow-[0_0_15px_currentColor]"
+            className="font-display text-2xl sm:text-3xl md:text-4xl font-bold transition-all duration-300 group-hover:drop-shadow-[0_0_15px_currentColor]"
             style={{ color }}
           >
             {typeof displayValue === 'number' ? displayValue.toLocaleString() : displayValue}
@@ -96,7 +96,7 @@ function StatCard({ label, value, icon, color, colorName, sublabel, delay = 0 }:
           )}
         </div>
         <div
-          className="p-2.5 rounded-lg transition-transform duration-300 group-hover:scale-110"
+          className="p-2 sm:p-2.5 rounded-lg transition-transform duration-300 group-hover:scale-110 flex-shrink-0"
           style={{ backgroundColor: `${color}12`, color }}
         >
           {icon}
@@ -124,7 +124,7 @@ export default function StatsCards({
   streak = 0,
 }: StatsCardsProps) {
   return (
-    <div className="grid grid-cols-4 gap-4 mb-6" data-gsap="stagger">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6" data-gsap="stagger">
       <StatCard
         label="Total Jobs Found"
         value={totalJobs}

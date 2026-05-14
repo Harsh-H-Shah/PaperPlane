@@ -63,7 +63,7 @@ export default function CombatHistoryEnhanced({ history, onViewJob, onApplyJob, 
   return (
     <div className="tech-border bg-[var(--valo-gray)] rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--valo-gray-light)]">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-5 py-3 sm:py-4 border-b border-[var(--valo-gray-light)]">
         <div className="flex items-center gap-3">
           <h3 className="font-display text-lg font-bold tracking-wider text-[var(--valo-text)]">
             JOB TARGETS
@@ -73,12 +73,12 @@ export default function CombatHistoryEnhanced({ history, onViewJob, onApplyJob, 
           </span>
         </div>
         {/* Filter Tabs */}
-        <div className="flex gap-1">
+        <div className="flex gap-1 overflow-x-auto scrollbar-hide -mx-1 px-1">
           {(['all', 'new', 'applied', 'failed'] as const).map(status => (
             <button
               key={status}
               onClick={() => setFilter(status)}
-              className={`px-3 py-1 text-xs font-semibold rounded transition-all ${
+              className={`px-3 py-1 text-xs font-semibold rounded transition-all whitespace-nowrap flex-shrink-0 ${
                 filter === status
                   ? 'bg-[var(--valo-cyan)] text-[var(--valo-dark)]'
                   : 'bg-[var(--valo-darker)] text-[var(--valo-text-dim)] hover:text-[var(--valo-text)]'
@@ -91,7 +91,7 @@ export default function CombatHistoryEnhanced({ history, onViewJob, onApplyJob, 
       </div>
       
       {/* List */}
-      <div className="divide-y divide-[var(--valo-gray-light)] max-h-[500px] overflow-y-auto">
+      <div className="divide-y divide-[var(--valo-gray-light)] max-h-[60vh] sm:max-h-[500px] overflow-y-auto">
         {filteredHistory.length === 0 ? (
           <div className="px-5 py-12 text-center">
             <div className="text-4xl mb-3">🎯</div>
@@ -111,36 +111,36 @@ export default function CombatHistoryEnhanced({ history, onViewJob, onApplyJob, 
               {/* Main Row */}
               <div
                 onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
-                className="flex items-center justify-between px-5 py-4 hover:bg-[var(--valo-darker)] transition-all cursor-pointer"
+                className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 sm:py-4 hover:bg-[var(--valo-darker)] transition-all cursor-pointer"
               >
-                <div className="flex items-center gap-4 flex-1 min-w-0">
+                <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                   {/* Status Icon */}
-                  <div className="w-10 h-10 rounded-lg bg-[var(--valo-darker)] border border-[var(--valo-gray-light)] flex items-center justify-center text-xl flex-shrink-0 group-hover:border-[var(--valo-cyan)] transition-colors">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-[var(--valo-darker)] border border-[var(--valo-gray-light)] flex items-center justify-center text-lg sm:text-xl flex-shrink-0 group-hover:border-[var(--valo-cyan)] transition-colors">
                     {getStatusIcon(item.status)}
                   </div>
-                  
+
                   {/* Job Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-[var(--valo-text)] group-hover:text-[var(--valo-cyan)] transition-colors truncate">
+                    <div className="font-semibold text-[var(--valo-text)] group-hover:text-[var(--valo-cyan)] transition-colors truncate text-sm sm:text-base">
                       {item.title}
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-[var(--valo-text-dim)]">
-                      <span className="truncate max-w-[200px]">{item.company}</span>
-                      <span className="text-[var(--valo-gray-light)]">•</span>
-                      <span className="text-[var(--valo-cyan)] uppercase text-xs">{item.source}</span>
-                      <span className="text-[var(--valo-gray-light)]">•</span>
-                      <span>{formatTimeAgo(item.discovered_at)}</span>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs sm:text-sm text-[var(--valo-text-dim)]">
+                      <span className="truncate max-w-[160px] sm:max-w-[200px]">{item.company}</span>
+                      <span className="text-[var(--valo-gray-light)] hidden sm:inline">•</span>
+                      <span className="text-[var(--valo-cyan)] uppercase text-[10px] sm:text-xs">{item.source}</span>
+                      <span className="text-[var(--valo-gray-light)] hidden sm:inline">•</span>
+                      <span className="hidden sm:inline">{formatTimeAgo(item.discovered_at)}</span>
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Right Side */}
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <span className={`px-3 py-1 rounded text-xs font-semibold tracking-wider whitespace-nowrap ${getStatusClass(item.status_color)}`}>
+                <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                  <span className={`hidden sm:inline-block px-3 py-1 rounded text-xs font-semibold tracking-wider whitespace-nowrap ${getStatusClass(item.status_color)}`}>
                     {item.status_label}
                   </span>
                   {item.xp_reward > 0 && (
-                    <span className="text-[var(--valo-green)] font-semibold text-sm whitespace-nowrap">
+                    <span className="text-[var(--valo-green)] font-semibold text-xs sm:text-sm whitespace-nowrap hidden sm:inline">
                       +{item.xp_reward} XP
                     </span>
                   )}
