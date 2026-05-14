@@ -107,23 +107,23 @@ export default function ArsenalPage() {
         isDeploying={!!activeScraper}
       />
 
-      <div className="flex-1 flex flex-col">
-        <main className="flex-1 p-8 overflow-auto">
-          <header className="mb-8">
-            <div className="flex items-center gap-2 text-[var(--valo-text-dim)] text-sm mb-1">
+      <div className="flex-1 flex flex-col min-w-0">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-auto">
+          <header className="mb-6 sm:mb-8 pl-12 md:pl-0">
+            <div className="flex items-center gap-2 text-[var(--valo-text-dim)] text-xs sm:text-sm mb-1">
               <span className="w-2 h-2 rounded-full bg-[var(--valo-yellow)] pulse-green"></span>
               EQUIPMENT LOADOUT
             </div>
-            <h1 className="font-display text-4xl font-bold tracking-wider text-[var(--valo-text)]">
+            <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold tracking-wider text-[var(--valo-text)]">
               ARSENAL
             </h1>
           </header>
 
           {/* Scrape Progress */}
           {activeScraper && scrapeProgress && (
-            <div className="tech-border bg-[var(--valo-gray)] rounded-lg p-6 mb-6 animate-pulse">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-display text-lg font-bold text-[var(--valo-cyan)]">
+            <div className="tech-border bg-[var(--valo-gray)] rounded-lg p-4 sm:p-6 mb-6 animate-pulse">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <h3 className="font-display text-base sm:text-lg font-bold text-[var(--valo-cyan)] break-words">
                   🔍 SCANNING: {scrapeProgress.current_source?.toUpperCase() || 'INITIALIZING...'}
                 </h3>
                 <div className="flex gap-6">
@@ -148,20 +148,20 @@ export default function ArsenalPage() {
           )}
 
           {/* Mass Scan Button */}
-          <div className="tech-border bg-[var(--valo-gray)] rounded-lg p-6 mb-6">
-            <div className="flex items-center justify-between">
+          <div className="tech-border bg-[var(--valo-gray)] rounded-lg p-4 sm:p-6 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h3 className="font-display text-xl font-bold text-[var(--valo-text)] mb-1">
+                <h3 className="font-display text-lg sm:text-xl font-bold text-[var(--valo-text)] mb-1">
                   FULL RECONNAISSANCE
                 </h3>
-                <p className="text-[var(--valo-text-dim)]">
+                <p className="text-sm text-[var(--valo-text-dim)]">
                   Scan all intelligence sources simultaneously for maximum coverage
                 </p>
               </div>
               <button
                 onClick={() => handleScrape()}
                 disabled={!!activeScraper}
-                className={`px-8 py-4 rounded-lg font-display font-bold tracking-wider transition-all ${
+                className={`w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-display font-bold tracking-wider transition-all flex-shrink-0 ${
                   activeScraper
                     ? 'bg-[var(--valo-gray-light)] text-[var(--valo-text-dim)] cursor-not-allowed'
                     : 'bg-[var(--valo-red)] text-white hover:opacity-80 glow-red'
@@ -176,7 +176,7 @@ export default function ArsenalPage() {
           <h2 className="font-display text-xl font-bold text-[var(--valo-text)] mb-4">
             INTELLIGENCE SOURCES
           </h2>
-          <div className="grid grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-8">
             {scrapers.map((scraper) => (
               <div
                 key={scraper.name}
@@ -219,7 +219,7 @@ export default function ArsenalPage() {
           <h2 className="font-display text-xl font-bold text-[var(--valo-text)] mb-4">
             TACTICAL TOOLS
           </h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {tools.map((tool) => (
               <div
                 key={tool.id}

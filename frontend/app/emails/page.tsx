@@ -545,8 +545,8 @@ export default function EmailsPage() {
         isDeploying={false}
       />
 
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        <main className="flex-1 p-8 overflow-y-auto">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto">
           {loading ? (
             <div className="text-center py-20">
               <svg className="w-8 h-8 animate-spin mx-auto mb-4 text-[var(--valo-cyan)]" fill="none" viewBox="0 0 24 24">
@@ -573,7 +573,7 @@ export default function EmailsPage() {
           ) : (
             <>
               {/* HEADER */}
-              <header className="mb-6">
+              <header className="mb-6 pl-12 md:pl-0">
                 <div className="flex items-center gap-2 text-[var(--valo-text-dim)] text-sm mb-1">
                   <span className="w-2 h-2 rounded-full bg-[var(--valo-cyan)] pulse-green" />
                   COMMUNICATIONS // COLD OUTREACH
@@ -594,7 +594,7 @@ export default function EmailsPage() {
               </div>
 
               {/* SEARCH + FILTER */}
-              <div className="flex gap-3 mb-6">
+              <div className="flex flex-col sm:flex-row gap-3 mb-6">
                 <div className="flex-1 relative">
                   <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--valo-text-dim)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -610,7 +610,7 @@ export default function EmailsPage() {
                 <select
                   value={jobFilter}
                   onChange={e => setJobFilter(e.target.value)}
-                  className="bg-black/30 border border-[var(--valo-gray)] px-4 py-2.5 text-[var(--valo-text)] outline-none focus:border-[var(--valo-cyan)] text-sm min-w-[200px]"
+                  className="bg-black/30 border border-[var(--valo-gray)] px-4 py-2.5 text-[var(--valo-text)] outline-none focus:border-[var(--valo-cyan)] text-sm w-full sm:w-auto sm:min-w-[200px]"
                 >
                   <option value="">ALL JOBS</option>
                   {jobs.map(j => (
@@ -620,7 +620,7 @@ export default function EmailsPage() {
               </div>
 
               {/* TABS */}
-              <div className="flex gap-6 mb-6 border-b border-[var(--valo-gray-light)] pb-1">
+              <div className="flex gap-3 sm:gap-6 mb-6 border-b border-[var(--valo-gray-light)] pb-1 overflow-x-auto scrollbar-hide">
                 {(['contacts', 'templates', 'compose', 'outbox'] as const).map(tab => (
                   <button
                     key={tab}
@@ -648,7 +648,7 @@ export default function EmailsPage() {
                   {/* Quick Add Inline Form */}
                   {showQuickAdd && (
                     <div className="tech-border p-4 mb-4 bg-[var(--valo-dark)]/50 border-[var(--valo-cyan)]">
-                      <div className="grid grid-cols-3 gap-3 mb-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                         <input
                           type="text"
                           placeholder="Name *"
@@ -921,7 +921,7 @@ export default function EmailsPage() {
                       <select
                         value={selectedTemplateContact}
                         onChange={e => setSelectedTemplateContact(e.target.value)}
-                        className="flex-1 min-w-[300px] bg-black/30 border border-[var(--valo-gray)] px-3 py-2 text-[var(--valo-text)] outline-none focus:border-[var(--valo-yellow)] text-sm"
+                        className="flex-1 w-full sm:w-auto sm:min-w-[300px] bg-black/30 border border-[var(--valo-gray)] px-3 py-2 text-[var(--valo-text)] outline-none focus:border-[var(--valo-yellow)] text-sm"
                       >
                         <option value="">Select contact for quick send/schedule...</option>
                         {contacts.map(c => (
@@ -1436,7 +1436,7 @@ export default function EmailsPage() {
             >
               <h2 className="font-display text-2xl font-bold text-[var(--valo-text)] mb-6 tracking-wider">REGISTER NEW CONTACT</h2>
               <div className="space-y-3 mb-6">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-[var(--valo-text-dim)] tracking-widest mb-1">NAME *</label>
                     <input type="text" value={contactForm.name} onChange={e => setContactForm({ ...contactForm, name: e.target.value })} className="w-full bg-black/30 border border-[var(--valo-gray)] p-2.5 text-white outline-none focus:border-[var(--valo-cyan)] text-sm" />
@@ -1446,7 +1446,7 @@ export default function EmailsPage() {
                     <input type="email" value={contactForm.email} onChange={e => setContactForm({ ...contactForm, email: e.target.value })} className="w-full bg-black/30 border border-[var(--valo-gray)] p-2.5 text-white outline-none focus:border-[var(--valo-cyan)] text-sm font-mono" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-[var(--valo-text-dim)] tracking-widest mb-1">TITLE</label>
                     <input type="text" placeholder="e.g. Senior Recruiter" value={contactForm.title} onChange={e => setContactForm({ ...contactForm, title: e.target.value })} className="w-full bg-black/30 border border-[var(--valo-gray)] p-2.5 text-white outline-none focus:border-[var(--valo-cyan)] text-sm" />
@@ -1456,7 +1456,7 @@ export default function EmailsPage() {
                     <input type="text" value={contactForm.company} onChange={e => setContactForm({ ...contactForm, company: e.target.value })} className="w-full bg-black/30 border border-[var(--valo-gray)] p-2.5 text-white outline-none focus:border-[var(--valo-cyan)] text-sm" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-[var(--valo-text-dim)] tracking-widest mb-1">PERSONA</label>
                     <select value={contactForm.persona} onChange={e => setContactForm({ ...contactForm, persona: e.target.value })} className="w-full bg-black/30 border border-[var(--valo-gray)] p-2.5 text-white outline-none focus:border-[var(--valo-cyan)] text-sm">

@@ -396,28 +396,28 @@ export default function MissionsPage() {
         isDeploying={false}
       />
 
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        <main className="flex-1 p-8 overflow-y-auto relative">
-          <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 text-[var(--valo-text-dim)] text-sm mb-1">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto relative">
+          <header className="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div className="pl-12 md:pl-0">
+              <div className="flex items-center gap-2 text-[var(--valo-text-dim)] text-xs sm:text-sm mb-1">
                 <span className="w-2 h-2 rounded-full bg-[var(--valo-cyan)] pulse-green"></span>
                 MISSION BRIEFING
               </div>
-              <h1 className="font-display text-4xl font-bold tracking-wider text-[var(--valo-text)]">
+              <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold tracking-wider text-[var(--valo-text)]">
                 ACTIVE MISSIONS
               </h1>
             </div>
 
-            <div className="flex gap-4 w-full md:w-auto">
-                <button 
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full md:w-auto">
+                <button
                   onClick={() => setShowManualModal(true)}
-                  className="bg-transparent border border-[var(--valo-cyan)] text-[var(--valo-cyan)] px-6 py-3 font-bold tracking-wider text-sm tech-button hover:bg-[var(--valo-cyan)] hover:text-black transition-all"
+                  className="bg-transparent border border-[var(--valo-cyan)] text-[var(--valo-cyan)] px-4 sm:px-6 py-2.5 sm:py-3 font-bold tracking-wider text-xs sm:text-sm tech-button hover:bg-[var(--valo-cyan)] hover:text-black transition-all whitespace-nowrap"
                   style={{ clipPath: 'polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%)' }}
                 >
                   ADD INTEL
                 </button>
-                
+
                 <div className="relative w-full md:w-80">
                    <input 
                       type="text" 
@@ -458,7 +458,7 @@ export default function MissionsPage() {
             </div>
 
             {/* Filters */}
-            <div className="flex gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                <ValorantDropdown
                   value={sourceFilter}
                   onChange={setSourceFilter}
@@ -471,7 +471,7 @@ export default function MissionsPage() {
                       { key: 'weworkremotely', label: 'WWR' },
                       { key: 'manual', label: 'MANUAL' },
                   ]}
-                  className="w-48"
+                  className="w-full"
                />
 
                <ValorantDropdown
@@ -486,7 +486,7 @@ export default function MissionsPage() {
                       { key: 'oracle', label: 'ORACLE' },
                       { key: 'smartrecruiters', label: 'SMART' },
                   ]}
-                  className="w-48"
+                  className="w-full"
                />
 
                 <ValorantDropdown
@@ -498,7 +498,7 @@ export default function MissionsPage() {
                        { key: 'company', label: 'BY COMPANY' },
                        { key: 'title', label: 'MISSION TITLE' },
                    ]}
-                   className="w-56"
+                   className="w-full"
                    placeholder="SORT BY"
                 />
              </div>
@@ -536,24 +536,24 @@ export default function MissionsPage() {
                        exitingJobIds.has(job.id) ? 'opacity-0 translate-x-full scale-95 pointer-events-none' : 'opacity-100 translate-x-0 scale-100'
                     }`}
                   >
-                  <div 
-                    className="p-5 relative group"
+                  <div
+                    className="p-4 sm:p-5 relative group"
                   >
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-[var(--valo-red)] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-200"></div>
 
-                    <div className="flex items-center justify-between pl-2">
-                      <div 
-                        className="flex-1 cursor-pointer"
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pl-2">
+                      <div
+                        className="flex-1 cursor-pointer min-w-0"
                         onClick={() => setSelectedJob(selectedJob?.id === job.id ? null : job)}
                       >
-                        <h3 className="font-display font-semibold text-xl text-[var(--valo-text)] group-hover:text-[var(--valo-red)] transition-colors">
+                        <h3 className="font-display font-semibold text-lg sm:text-xl text-[var(--valo-text)] group-hover:text-[var(--valo-red)] transition-colors break-words">
                           {job.title}
                         </h3>
-                        <p className="text-sm text-[var(--valo-text-dim)] font-mono mt-1">
+                        <p className="text-xs sm:text-sm text-[var(--valo-text-dim)] font-mono mt-1 break-words">
                           {job.company.toUpperCase()} <span className="text-[var(--valo-gray-light)]">|</span> {job.location || 'REMOTE'} <span className="text-[var(--valo-gray-light)]">|</span> <span className="text-[var(--valo-cyan)]">{job.source.toUpperCase()}</span>
                         </p>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center flex-wrap gap-2 sm:gap-3">
                         {/* Quick Apply Button */}
                         {(job.status === 'new' || job.status === 'needs_review' || job.status === 'failed') && !deployingJobs.has(job.id) && (
                           <button

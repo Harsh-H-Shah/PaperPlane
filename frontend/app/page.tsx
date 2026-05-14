@@ -178,8 +178,8 @@ export default function Dashboard() {
         isDeploying={isDeploying}
       />
 
-      <div className="flex-1 flex flex-col">
-        <main className="flex-1 p-8 overflow-auto">
+      <div className="flex-1 flex flex-col min-w-0">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-auto">
           {error ? (
             <div className="glass-card bg-[var(--valo-red)]/10 p-6 text-center animate-in fade-in" data-gsap="scale-in">
               <div className="text-xl font-semibold text-[var(--valo-red)] mb-2">⚠️ CONNECTION ERROR</div>
@@ -231,11 +231,11 @@ export default function Dashboard() {
 
         {/* Job Details Modal */}
         {selectedJob && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in p-4" onClick={() => setSelectedJob(null)}>
-            <div className="max-w-4xl w-full glass-card bg-[var(--valo-dark)] shadow-[0_0_60px_rgba(0,0,0,0.8)] relative" onClick={e => e.stopPropagation()}>
-               <div className="flex items-center justify-between p-4 border-b border-white/10">
-                  <h2 className="font-display text-2xl font-bold tracking-wider">{selectedJob.title}</h2>
-                  <button onClick={() => setSelectedJob(null)} className="text-[var(--valo-text-dim)] hover:text-white transition-colors">
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in p-2 sm:p-4" onClick={() => setSelectedJob(null)}>
+            <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto glass-card bg-[var(--valo-dark)] shadow-[0_0_60px_rgba(0,0,0,0.8)] relative" onClick={e => e.stopPropagation()}>
+               <div className="flex items-center justify-between gap-3 p-4 border-b border-white/10">
+                  <h2 className="font-display text-lg sm:text-2xl font-bold tracking-wider truncate min-w-0">{selectedJob.title}</h2>
+                  <button onClick={() => setSelectedJob(null)} className="text-[var(--valo-text-dim)] hover:text-white transition-colors flex-shrink-0">
                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
                </div>
