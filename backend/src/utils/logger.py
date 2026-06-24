@@ -4,6 +4,8 @@ from pathlib import Path
 from collections import deque
 from logging.handlers import RotatingFileHandler
 
+from src.utils import paths
+
 
 class MemoryLogHandler(logging.Handler):
     """In-memory ring buffer for recent log entries. Always works, no file I/O."""
@@ -23,7 +25,8 @@ class MemoryLogHandler(logging.Handler):
 memory_handler = MemoryLogHandler(capacity=1000)
 
 
-def setup_logger(name: str = "PaperPlane", log_file: str = "logs/activity.log") -> logging.Logger:
+def setup_logger(name: str = "PaperPlane", log_file: str | None = None) -> logging.Logger:
+    log_file = log_file or str(paths.activity_log())
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
     

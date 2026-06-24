@@ -290,8 +290,9 @@ class ColdEmailModel(Base):
 
 
 class Database:
-    def __init__(self, db_path: str = "data/applications.db", echo: bool = False):
-        self.db_path = Path(db_path)
+    def __init__(self, db_path: str | None = None, echo: bool = False):
+        from src.utils import paths
+        self.db_path = Path(db_path) if db_path else paths.db_path()
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._echo = echo
         self.engine, self.SessionLocal = self._create_engine_and_session()

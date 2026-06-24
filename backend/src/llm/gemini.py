@@ -18,8 +18,9 @@ class RateLimiter:
     MAX_MONTHLY_TOKENS = 900_000
     MIN_REQUEST_INTERVAL = 0.06  # 60/1000 = 0.06s
     
-    def __init__(self, usage_file: str = "data/llm_usage.json"):
-        self.usage_file = Path(usage_file)
+    def __init__(self, usage_file: str | None = None):
+        from src.utils import paths
+        self.usage_file = Path(usage_file) if usage_file else paths.llm_usage_path()
         self.lock = Lock()
         self.last_request_time = 0.0
         self._load_usage()

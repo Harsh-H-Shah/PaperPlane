@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel, Field, model_validator
 
+from src.utils import paths
+
 
 class Address(BaseModel):
     street: str = ""
@@ -155,7 +157,7 @@ class Language(BaseModel):
 
 
 class Resume(BaseModel):
-    file_path: str = "data/resume.pdf"
+    file_path: str = Field(default_factory=lambda: str(paths.resume_path()))
     last_updated: str = ""
 
 

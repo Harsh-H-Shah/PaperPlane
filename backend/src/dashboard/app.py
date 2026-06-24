@@ -18,6 +18,7 @@ from src.utils.database import get_db
 from src.utils.config import get_settings
 from src.core.job import JobStatus, ApplicationType
 from src.utils.logger import logger
+from src.utils import paths
 
 # ============ Admin Auth ============
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "")
@@ -475,34 +476,17 @@ async def delete_job(job_id: str):
 async def get_scraper_status():
     settings = get_settings()
     
+    # Mirrors the scrapers actually registered in JobAggregator._setup_scrapers.
+    # Simplify and CVRVE are gated by config flags; the rest are always on.
     scrapers = [
-        {
-            "name": "Simplify",
-            "enabled": settings.scrapers.simplify.enabled,
-            "configured": True,
-            "icon": "📦"
-        },
-        {
-            "name": "CVRVE",
-            "enabled": settings.scrapers.cvrve.enabled,
-            "configured": True,
-            "icon": "🎯"
-        },
-        {
-            "name": "Jobright",
-            "enabled": True,
-            "configured": True,
-            "icon": "🚀"
-        },
-
-        {
-            "name": "WeWorkRemotely",
-            "enabled": True,
-            "configured": True,
-            "icon": "🌍"
-        },
+        {"name": "Simplify", "enabled": settings.scrapers.simplify.enabled, "configured": True, "icon": "📦"},
+        {"name": "CVRVE", "enabled": settings.scrapers.cvrve.enabled, "configured": True, "icon": "🎯"},
+        {"name": "Jobright", "enabled": True, "configured": True, "icon": "🚀"},
+        {"name": "BuiltIn", "enabled": True, "configured": True, "icon": "🏗️"},
+        {"name": "Careerjet", "enabled": True, "configured": True, "icon": "🔎"},
+        {"name": "GreenhouseJobs", "enabled": True, "configured": True, "icon": "🌱"},
     ]
-    
+
     return {"scrapers": scrapers}
 
 
@@ -582,8 +566,8 @@ async def get_activity_log(lines: int = 50):
         return {"logs": mem_logs}
     
     # Fallback: try reading from log file
-    log_path = Path(__file__).parent.parent.parent / "logs" / "activity.log"
-    
+    log_path = paths.activity_log()
+
     if not log_path.exists():
         return {"logs": []}
         
@@ -623,8 +607,8 @@ async def get_profile(authorization: Optional[str] = Header(None)):
     
     admin = is_admin(authorization)
     
-    profile_path = Path(__file__).parent.parent.parent.parent / "data" / "profile.json"
-    
+    profile_path = paths.profile_path()
+
     # Get valorant_agent from SQLite database
     db = get_db()
     valorant_agent = "jett"  # Default
@@ -872,18 +856,11 @@ async def trigger_apply(job_id: str, background_tasks: BackgroundTasks):
             running_applications.pop(job_id, None)
             return
         
-        # Load profile
-        # Since we run from backend/ directory, data/ is in parent
-        root_dir = Path(__file__).parent.parent.parent.parent
-        profile_path = root_dir / "data" / "profile.json"
-        
-        # Fallback for dev environment path differences
-        if not profile_path.exists():
-             # Try just "data/profile.json" in case CWD is root
-             profile_path = Path("data/profile.json")
+        # Load profile (repo-root data/, regardless of where we launched from)
+        profile_path = paths.profile_path()
 
         if not profile_path.exists():
-            logger.error(f"Profile not found at {profile_path} or data/profile.json")
+            logger.error(f"Profile not found at {profile_path}")
             running_applications.pop(job_id, None)
             return
             
@@ -1281,10 +1258,7 @@ async def render_email_preview(data: RenderEmail):
         applicant = None
         try:
             from src.core.applicant import Applicant
-            root_dir = Path(__file__).parent.parent.parent.parent
-            profile_path = root_dir / "data" / "profile.json"
-            if not profile_path.exists():
-                profile_path = Path("data/profile.json")
+            profile_path = paths.profile_path()
             if profile_path.exists():
                 applicant = Applicant.from_file(profile_path)
         except Exception as e:
