@@ -15,16 +15,26 @@ codebase evolves.
 paperplane/
 ├── backend/            # Python: FastAPI dashboard + Typer CLI + automation engine
 │   ├── main.py         # CLI entry point (python main.py <command>)
+│   ├── scripts/        # Dev/ops scripts (e.g. smoke_api.py)
 │   └── src/
 │       ├── core/       # Domain models (Job, Application, Applicant) — Pydantic
-│       ├── dashboard/  # FastAPI app (app.py) — the REST API the frontend calls
+│       ├── dashboard/  # FastAPI app — thin app.py + api/ routers (see below)
+│       │   ├── app.py        # builds FastAPI app, CORS, includes routers
+│       │   ├── api/          # one APIRouter per domain (jobs, email, stats, …)
+│       │   ├── dependencies.py  # admin auth
+│       │   ├── state.py         # shared in-process state
+│       │   ├── schemas.py       # pydantic request bodies
+│       │   └── services/        # endpoint-agnostic logic (gamification)
 │       ├── scrapers/   # Job-source scrapers (subclass BaseScraper)
 │       ├── fillers/    # Per-ATS form fillers (subclass BaseFiller)
 │       ├── classifiers/# Detects which ATS a job-apply page is (→ which filler)
 │       ├── llm/        # Gemini client + prompts (answers open-ended questions)
 │       ├── email/      # Cold-email subsystem (templates, send, schedule)
 │       ├── notifier/   # ntfy push notifications
-│       └── utils/      # config, database, browser, logger, PATHS
+│       └── utils/      # config, paths, browser, logger
+│           ├── models/       # SQLAlchemy ORM models (one Base)
+│           ├── repositories/ # query methods grouped by domain (mixins)
+│           └── database.py    # Database (engine+session) composes the mixins
 ├── frontend/           # Next.js 16 / React 19 dashboard UI
 ├── config/settings.yaml# Runtime configuration (search, scrapers, llm, etc.)
 ├── data/               # ALL runtime data (db, profile, resume, screenshots) — gitignored
@@ -91,9 +101,24 @@ from an in-memory log buffer, so `print()` won't show up there. (CLI commands in
 3. Add detection logic in `src/classifiers/detector.py`.
 
 ### 7. API endpoints
-Live in `src/dashboard/app.py` (FastAPI). The frontend calls them through
-`frontend/lib/api.ts`. Write endpoints return data the frontend already expects —
-keep response shapes stable.
+Each domain has its own router in `src/dashboard/api/` (e.g. `jobs.py`,
+`email.py`, `stats.py`). To add an endpoint, add it to the relevant router and —
+if it's a brand-new domain — create a router and `include_router` it in
+`app.py`. Put request bodies in `schemas.py`, auth via `Depends(require_admin)`
+from `dependencies.py`, shared progress state in `state.py`. The frontend calls
+these through `frontend/lib/api.ts`; keep response shapes stable.
+
+After changing endpoints, run the smoke check: start the server, then
+`python scripts/smoke_api.py` — it probes the read endpoints and prints the
+route table so you can confirm nothing regressed.
+
+### 8. Database queries
+`get_db()` returns a `Database` that composes per-domain repository mixins in
+`src/utils/repositories/` (jobs, contacts, templates, cold_emails, applications).
+To add a query, put the method on the matching mixin — it's available as
+`db.<method>()` automatically. ORM models live in `src/utils/models/` (all share
+the one `Base`); `database.py` re-exports them so `from src.utils.database import
+JobModel` still works.
 
 ---
 
