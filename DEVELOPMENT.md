@@ -81,8 +81,10 @@ caused a "two databases" bug — one in `backend/data/`, one at the root.)
 
 ### 3. One database
 `data/applications.db` (SQLite). Accessed via the `get_db()` singleton in
-`src/utils/database.py`. There is no migration framework yet — schema is created
-with `Base.metadata.create_all()` on startup. (Alembic is a planned follow-up.)
+`src/utils/database.py`. Schema changes are managed with **Alembic** — the app
+migrates itself on startup (`upgrade head`). To change the schema, edit a model
+under `src/utils/models/` and run `python -m alembic revision --autogenerate -m
+"…"`. See [backend/alembic/README.md](backend/alembic/README.md).
 
 ### 4. Logging, not print
 Use `from src.utils.logger import logger`. The dashboard's live activity feed reads
@@ -141,4 +143,4 @@ the foundation cleanup. They're recoverable from git history if revived later:
   `application.review_mode: true`, and the browser form-fill path is unverified.
   The `auto_submit` flag exists in config but is currently not read.
 - **Gemini SDK** uses the deprecated `google.generativeai` package — migrate to `google-genai`.
-- **No automated tests / no DB migrations** yet.
+- **No automated tests** yet (smoke harness only: `backend/scripts/smoke_api.py`).

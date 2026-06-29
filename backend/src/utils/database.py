@@ -56,7 +56,7 @@ class Database(
         )
         session_factory = sessionmaker(bind=engine)
         try:
-            Base.metadata.create_all(engine)
+            self._init_schema(engine)
         except SQLAlchemyDatabaseError as e:
             orig = str(e.orig) if getattr(e, "orig", None) else str(e)
             if "malformed" in orig.lower() or "disk image" in orig.lower():
@@ -78,10 +78,31 @@ class Database(
                     connect_args={"check_same_thread": False}
                 )
                 session_factory = sessionmaker(bind=engine)
-                Base.metadata.create_all(engine)
+                self._init_schema(engine)
             else:
                 raise
         return engine, session_factory
+
+    def _init_schema(self, engine) -> None:
+        """Bring the database schema up to date via Alembic.
+
+        - brand-new DB: build the current schema and mark it at head
+        - pre-Alembic DB (tables but no alembic_version): baseline it, then upgrade
+        - managed DB: apply any pending migrations
+        """
+        from sqlalchemy import inspect
+        from src.utils import migrations
+
+        db_url = f"sqlite:///{self.db_path}"
+        tables = set(inspect(engine).get_table_names())
+        if not tables:
+            Base.metadata.create_all(engine)
+            migrations.stamp_head(db_url)
+        elif "alembic_version" not in tables:
+            migrations.stamp_head(db_url)
+            migrations.upgrade_head(db_url)
+        else:
+            migrations.upgrade_head(db_url)
 
     @contextmanager
     def session(self) -> Session:
