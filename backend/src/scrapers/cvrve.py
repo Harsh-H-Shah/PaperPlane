@@ -6,6 +6,7 @@ from datetime import datetime
 from src.scrapers.base_scraper import BaseScraper
 from src.core.job import Job, JobSource
 from src.classifiers.detector import detect_application_type
+from src.utils.logger import logger
 
 
 class CVRVEScraper(BaseScraper):
@@ -22,14 +23,14 @@ class CVRVEScraper(BaseScraper):
             new_grad_jobs = await self._fetch_listings(self.NEW_GRAD_URL, keywords, limit)
             jobs.extend(new_grad_jobs)
         except Exception as e:
-            print(f"Error fetching CVRVE new grad: {e}")
+            logger.error(f"Error fetching CVRVE new grad: {e}")
         
         if len(jobs) < limit:
             try:
                 intern_jobs = await self._fetch_listings(self.LISTINGS_URL, keywords, limit - len(jobs))
                 jobs.extend(intern_jobs)
             except Exception as e:
-                print(f"Error fetching CVRVE internships: {e}")
+                logger.error(f"Error fetching CVRVE internships: {e}")
         
         self.jobs_found = len(jobs)
         return jobs[:limit]
@@ -109,5 +110,5 @@ class CVRVEScraper(BaseScraper):
                 source=JobSource.CVRVE,
             )
         except Exception as e:
-            print(f"Error parsing CVRVE listing: {e}")
+            logger.error(f"Error parsing CVRVE listing: {e}")
             return None

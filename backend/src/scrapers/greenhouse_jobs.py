@@ -11,6 +11,7 @@ from typing import Optional
 from src.scrapers.base_scraper import BaseScraper
 from src.scrapers.scraper_utils import parse_date_string
 from src.core.job import Job, JobSource, ApplicationType
+from src.utils.logger import logger
 
 
 
@@ -77,7 +78,7 @@ class GreenhouseJobsScraper(BaseScraper):
             await asyncio.sleep(0.5)
         
         self.jobs_found = len(jobs)
-        print(f"   📋 GreenhouseJobs: Found {len(jobs)} jobs from {len(self.board_tokens)} boards")
+        logger.info(f"   📋 GreenhouseJobs: Found {len(jobs)} jobs from {len(self.board_tokens)} boards")
         return jobs[:limit]
     
     async def _fetch_board_jobs(self, board_token: str, keywords: list[str]) -> list[Job]:

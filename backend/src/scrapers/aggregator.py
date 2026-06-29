@@ -13,6 +13,7 @@ from src.scrapers.greenhouse_jobs import GreenhouseJobsScraper
 from src.core.job import Job
 from src.utils.config import get_settings
 from src.utils.database import get_db
+from src.utils.logger import logger
 
 
 class JobAggregator:
@@ -63,7 +64,7 @@ class JobAggregator:
         
         for scraper, result in zip(self.scrapers, results):
             if isinstance(result, Exception):
-                print(f"Error from {scraper.SOURCE_NAME}: {result}")
+                logger.error(f"Error from {scraper.SOURCE_NAME}: {result}")
                 stats["sources"].append({"name": scraper.SOURCE_NAME, "found": 0, "new": 0, "error": str(result)})
             else:
                 all_jobs.extend(result)
@@ -149,7 +150,7 @@ class JobAggregator:
             if not self.validator:
                 self.validator = get_link_validator()
             valid_jobs, invalid = await self.validator.validate_jobs(new_jobs)
-            print(f"Validated {len(new_jobs)} jobs: {len(valid_jobs)} valid, {len(invalid)} invalid")
+            logger.info(f"Validated {len(new_jobs)} jobs: {len(valid_jobs)} valid, {len(invalid)} invalid")
             new_jobs = valid_jobs
         
         # Check DB existence in bulk

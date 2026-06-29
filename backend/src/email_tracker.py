@@ -8,6 +8,7 @@ from enum import Enum
 from src.utils.config import get_settings
 from src.utils.database import get_db
 from src.core.job import JobStatus
+from src.utils.logger import logger
 
 
 class EmailType(str, Enum):
@@ -152,7 +153,7 @@ class EmailTracker:
         )
     
     async def check_gmail(self, max_results: int = 50) -> list[ParsedEmail]:
-        print("📧 Gmail integration requires OAuth2 setup.")
+        logger.info("📧 Gmail integration requires OAuth2 setup.")
         return []
 
 

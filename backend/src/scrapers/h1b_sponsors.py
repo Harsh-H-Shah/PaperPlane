@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 from dataclasses import dataclass
 
 from src.utils.config import get_settings
+from src.utils.logger import logger
 
 
 @dataclass
@@ -105,12 +106,12 @@ class H1BSponsorScraper:
                 response = await client.get(self.H1BDATA_URL, headers=headers, follow_redirects=True)
                 
                 if response.status_code != 200:
-                    print(f"Failed to fetch H1B data: {response.status_code}")
+                    logger.error(f"Failed to fetch H1B data: {response.status_code}")
                     return self._get_fallback_sponsors()
                 
                 return self._parse_h1bdata(response.text, limit)
         except Exception as e:
-            print(f"Error fetching H1B sponsors: {e}")
+            logger.error(f"Error fetching H1B sponsors: {e}")
             return self._get_fallback_sponsors()
     
     def _parse_h1bdata(self, html: str, limit: int) -> list[H1BSponsor]:

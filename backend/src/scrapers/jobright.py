@@ -7,6 +7,7 @@ from src.scrapers.base_scraper import BaseScraper
 from src.scrapers.scraper_utils import parse_date_string
 from src.core.job import Job, JobSource
 from src.classifiers.detector import detect_application_type
+from src.utils.logger import logger
 
 
 class JobrightScraper(BaseScraper):
@@ -32,14 +33,14 @@ class JobrightScraper(BaseScraper):
                 api_jobs = await self._fetch_from_api(limit)
                 jobs.extend(api_jobs)
             except Exception as e:
-                print(f"Jobright API error: {e}, falling back to GitHub")
+                logger.error(f"Jobright API error: {e}, falling back to GitHub")
         
         if len(jobs) < limit:
             try:
                 github_jobs = await self._fetch_from_github(keywords, limit - len(jobs))
                 jobs.extend(github_jobs)
             except Exception as e:
-                print(f"Jobright GitHub error: {e}")
+                logger.error(f"Jobright GitHub error: {e}")
         
         self.jobs_found = len(jobs)
         return jobs[:limit]
@@ -69,7 +70,7 @@ class JobrightScraper(BaseScraper):
                 
                 # Check if we have what we need
                 if not session_id and not self.user_id:
-                     print("   [WARNING] No Jobright SESSION_ID or UserID found. API may fail.")
+                     logger.error("   [WARNING] No Jobright SESSION_ID or UserID found. API may fail.")
                 
                 params = {
                     "refresh": "true" if position == 0 else "false",
@@ -85,9 +86,9 @@ class JobrightScraper(BaseScraper):
                     timeout=30
                 )
                 
-                print(f"   [DEBUG] Jobright API Status: {response.status_code}")
+                logger.info(f"   [DEBUG] Jobright API Status: {response.status_code}")
                 if response.status_code != 200:
-                    print(f"   [DEBUG] Jobright API Error: {response.text}")
+                    logger.error(f"   [DEBUG] Jobright API Error: {response.text}")
                     break
                 
                 data = response.json()

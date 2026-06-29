@@ -11,6 +11,7 @@ from src.scrapers.base_scraper import BaseScraper
 from src.scrapers.scraper_utils import parse_date_string
 from src.core.job import Job, JobSource
 from src.classifiers.detector import detect_application_type
+from src.utils.logger import logger
 
 
 class CareerjetScraper(BaseScraper):
@@ -56,7 +57,7 @@ class CareerjetScraper(BaseScraper):
                 unique_jobs.append(job)
         
         self.jobs_found = len(unique_jobs)
-        print(f"   📋 Careerjet: Found {len(unique_jobs)} unique jobs")
+        logger.info(f"   📋 Careerjet: Found {len(unique_jobs)} unique jobs")
         return unique_jobs[:limit]
     
     async def _search_page(self, keyword: str, location: str, page: int) -> list[Job]:
@@ -90,10 +91,10 @@ class CareerjetScraper(BaseScraper):
                 if response.status_code == 200:
                     jobs = self._parse_search_results(response.text)
                     if page == 1:
-                        print(f"      Careerjet: Found {len(jobs)} jobs for '{keyword}' page {page}")
+                        logger.info(f"      Careerjet: Found {len(jobs)} jobs for '{keyword}' page {page}")
                         
         except Exception as e:
-            print(f"   ❌ Careerjet error: {e}")
+            logger.error(f"   ❌ Careerjet error: {e}")
         
         return jobs
     

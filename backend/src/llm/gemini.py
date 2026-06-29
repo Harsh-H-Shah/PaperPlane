@@ -10,6 +10,7 @@ import google.generativeai as genai
 from google.generativeai.types import GenerationConfig
 
 from src.utils.config import get_settings
+from src.utils.logger import logger
 
 
 class RateLimiter:
@@ -118,7 +119,7 @@ class GeminiClient:
             raise ValueError("Gemini API key not found. Set GEMINI_API_KEY in .env file.")
         # Use model from settings
         model_name = settings.llm.model
-        print(f"   🤖 Using LLM model: {model_name}")
+        logger.info(f"   🤖 Using LLM model: {model_name}")
         self.model = genai.GenerativeModel(model_name)
         self.rate_limiter = RateLimiter()
         self.default_config = GenerationConfig(max_output_tokens=300, temperature=0.7)
@@ -132,12 +133,12 @@ class GeminiClient:
             if not can_proceed:
                 if "Rate limited" in reason:
                     if attempt == 0:
-                        print("   ⏳ Rate limited, waiting briefly...")
+                        logger.info("   ⏳ Rate limited, waiting briefly...")
                     # Non-blocking wait in async
                     await asyncio.sleep(min(1.0, self.rate_limiter.MIN_REQUEST_INTERVAL))
                     continue
                 else:
-                    print(f"⚠️ LLM Request blocked: {reason}")
+                    logger.warning(f"⚠️ LLM Request blocked: {reason}")
                     return None
             
             break # Can proceed
@@ -147,8 +148,8 @@ class GeminiClient:
         
         if self.rate_limiter.is_near_limit() and not self._limit_warning_shown:
             stats = self.rate_limiter.get_usage_stats()
-            print(f"⚠️ Approaching LLM limits: {stats['daily_requests']}/{stats['daily_limit']} daily, "
-                  f"{stats['monthly_tokens']:,}/{stats['monthly_limit']:,} monthly tokens")
+            logger.warning(f"⚠️ Approaching LLM limits: {stats['daily_requests']}/{stats['daily_limit']} daily, "
+                           f"{stats['monthly_tokens']:,}/{stats['monthly_limit']:,} monthly tokens")
             self._limit_warning_shown = True
         
         try:
@@ -174,14 +175,14 @@ class GeminiClient:
             # More specific check for rate limit errors
             is_rate_limit = "429" in error_msg or "quota" in error_msg or "resource_exhausted" in error_msg
             if is_rate_limit:
-                print(f"⚠️ Rate limit exceeded: {e}")
+                logger.warning(f"⚠️ Rate limit exceeded: {e}")
                 self.rate_limiter.record_request(0)
             elif "api key" in error_msg:
-                print(f"❌ Invalid API key: {e}")
+                logger.error(f"❌ Invalid API key: {e}")
             elif "404" in error_msg or "not found" in error_msg:
-                print(f"❌ Model/Resource Error (404): {e}")
+                logger.error(f"❌ Model/Resource Error (404): {e}")
             else:
-                print(f"❌ LLM Error: {e}")
+                logger.error(f"❌ LLM Error: {e}")
             
             return None
     

@@ -129,12 +129,12 @@ async def scrape_contacts(
             if job_id and not target_company:
                 job = db.get_job(job_id)
                 if not job:
-                    print(f"   ❌ Job {job_id} not found")
+                    logger.error(f"   ❌ Job {job_id} not found")
                     return
                 target_company = job.company
 
             if not target_company:
-                print("   ❌ No company found to scrape")
+                logger.error("   ❌ No company found to scrape")
                 return
 
             scraper = ApolloScraper()
@@ -146,9 +146,9 @@ async def scrape_contacts(
                     contact.job_id = job_id
 
             count = db.add_contacts_bulk(contacts)
-            print(f"   ✅ Scraped {count} contacts for {target_company}" + (f" (linked to job {job_id})" if job_id else ""))
+            logger.info(f"   ✅ Scraped {count} contacts for {target_company}" + (f" (linked to job {job_id})" if job_id else ""))
         except Exception as e:
-            print(f"   ❌ Contact scrape error: {e}")
+            logger.error(f"   ❌ Contact scrape error: {e}")
 
     background_tasks.add_task(run_scrape)
     return {"status": "started", "message": f"Scraping contacts for {company or 'job'}"}
@@ -335,9 +335,9 @@ async def send_email_now(email_id: str, background_tasks: BackgroundTasks):
             from src.email.cold_email_service import get_cold_email_service
             service = get_cold_email_service()
             success = await service.send_email_now(email_id)
-            print(f"   {'✅' if success else '❌'} Send email {email_id}: {'success' if success else 'failed'}")
+            logger.error(f"   {'✅' if success else '❌'} Send email {email_id}: {'success' if success else 'failed'}")
         except Exception as e:
-            print(f"   ❌ Send error: {e}")
+            logger.error(f"   ❌ Send error: {e}")
 
     background_tasks.add_task(run_send)
     return {"status": "sending", "email_id": email_id}
@@ -430,7 +430,7 @@ async def create_campaign(campaign_in: CampaignCreate, background_tasks: Backgro
             job = db.get_job(campaign_in.job_id)
 
             if not job:
-                print(f"   ❌ Job {campaign_in.job_id} not found")
+                logger.error(f"   ❌ Job {campaign_in.job_id} not found")
                 return
 
             personas = None
@@ -443,9 +443,9 @@ async def create_campaign(campaign_in: CampaignCreate, background_tasks: Backgro
                 max_contacts=campaign_in.max_contacts,
                 personas=personas
             )
-            print(f"   ✅ Campaign created: {result}")
+            logger.info(f"   ✅ Campaign created: {result}")
         except Exception as e:
-            print(f"   ❌ Campaign error: {e}")
+            logger.error(f"   ❌ Campaign error: {e}")
 
     background_tasks.add_task(run_campaign)
     return {"status": "started", "job_id": campaign_in.job_id}
@@ -477,9 +477,9 @@ async def process_scheduled_emails(background_tasks: BackgroundTasks):
             from src.email.cold_email_service import get_cold_email_service
             service = get_cold_email_service()
             result = await service.process_scheduled()
-            print(f"   ✅ Processed emails: {result}")
+            logger.info(f"   ✅ Processed emails: {result}")
         except Exception as e:
-            print(f"   ❌ Process error: {e}")
+            logger.error(f"   ❌ Process error: {e}")
 
     background_tasks.add_task(run_process)
     return {"status": "started", "message": "Processing scheduled emails"}

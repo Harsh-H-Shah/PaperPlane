@@ -6,6 +6,7 @@ from email.header import decode_header
 from typing import Optional
 
 from src.utils.config import get_settings
+from src.utils.logger import logger
 
 class MailHandler:
     def __init__(self):
@@ -18,7 +19,7 @@ class MailHandler:
         # Fallback to SMTP credentials if IMAP ones are missing or placeholders
         if not self.username or "your_email" in self.username:
             if self.settings.smtp_user:
-                print(f"📧 MailHandler: Using SMTP credentials for IMAP (User: {self.settings.smtp_user})")
+                logger.info(f"📧 MailHandler: Using SMTP credentials for IMAP (User: {self.settings.smtp_user})")
                 self.username = self.settings.smtp_user
                 self.password = self.settings.smtp_password
         
@@ -31,7 +32,7 @@ class MailHandler:
         and extracts a 6-digit verification code.
         """
         if not self.username or not self.password:
-            print("⚠️ MailHandler: Email credentials (EMAIL_USER) not set.")
+            logger.warning("⚠️ MailHandler: Email credentials (EMAIL_USER) not set.")
             return None
 
         try:
@@ -75,7 +76,7 @@ class MailHandler:
                 #    if datetime.now(date_obj.tzinfo) - date_obj > timedelta(minutes=timeframe_minutes):
                 #        continue
 
-                print(f"📧 MailHandler: Found matching email: '{subject}'")
+                logger.info(f"📧 MailHandler: Found matching email: '{subject}'")
 
                 # Parse Body
                 body = ""
@@ -140,14 +141,14 @@ class MailHandler:
                                  break
                 
                 if code:
-                    print(f"✅ MailHandler: Extracted Code: {code}")
+                    logger.info(f"✅ MailHandler: Extracted Code: {code}")
                     mail.logout()
                     return code
             
             mail.logout()
-            print("⚠️ MailHandler: No code found in recent emails.")
+            logger.warning("⚠️ MailHandler: No code found in recent emails.")
             return None
 
         except Exception as e:
-            print(f"❌ MailHandler Error: {e}")
+            logger.error(f"❌ MailHandler Error: {e}")
             return None

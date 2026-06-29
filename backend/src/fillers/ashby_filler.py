@@ -4,6 +4,7 @@ import asyncio
 from src.core.application import Application
 from src.core.job import Job
 from src.fillers.base_filler import BaseFiller
+from src.utils.logger import logger
 
 class AshbyFiller(BaseFiller):
     PLATFORM_NAME = "Ashby"
@@ -42,7 +43,7 @@ class AshbyFiller(BaseFiller):
 
     async def fill(self, page: Page, job: Job, application: Application) -> bool:
         application.start()
-        print(f"DEBUG: AshbyFiller starting for {job.company}")
+        logger.info(f"DEBUG: AshbyFiller starting for {job.company}")
 
         try:
             await self.wait_for_page_load(page)
@@ -54,20 +55,20 @@ class AshbyFiller(BaseFiller):
             if not is_form_visible:
                 apply_btn = page.locator(self.SELECTORS["apply_button"])
                 if await apply_btn.count() > 0:
-                    print("   🖱️ Clicking 'Apply' button to reveal form...")
+                    logger.info("   🖱️ Clicking 'Apply' button to reveal form...")
                     await apply_btn.first.click()
                     # Wait for form elements to appear
                     try:
                         await page.wait_for_selector(self.SELECTORS["name"], timeout=5000)
-                        print("   ✅ Form revealed")
+                        logger.info("   ✅ Form revealed")
                     except Exception:
-                        print("   ⚠️ Form fields didn't appear after click. Trying to wait for URL...")
+                        logger.warning("   ⚠️ Form fields didn't appear after click. Trying to wait for URL...")
                         try:
                             await page.wait_for_url(lambda u: "application" in u, timeout=3000)
                         except Exception:
                             pass
                 else:
-                    print("   ℹ️ No 'Apply' button found, assuming we might be on form or it's slow...")
+                    logger.info("   ℹ️ No 'Apply' button found, assuming we might be on form or it's slow...")
             
             await asyncio.sleep(1)
 
@@ -77,7 +78,7 @@ class AshbyFiller(BaseFiller):
             # 2. Basic Info
             if not await self._fill_basic_info(page, application):
                  # If we can't find basic info, maybe the form didn't load or it's a different structure
-                 print("   ⚠️ Could not find basic info fields. Trying to wait longer...")
+                 logger.warning("   ⚠️ Could not find basic info fields. Trying to wait longer...")
                  await asyncio.sleep(2)
                  if not await self._fill_basic_info(page, application):
                      raise Exception("Failed to identify application form fields")
@@ -102,10 +103,10 @@ class AshbyFiller(BaseFiller):
 
             # 6. Submit
             if application.questions_for_review:
-                 print(f"DEBUG: Application needs review: {application.questions_for_review}")
+                 logger.info(f"DEBUG: Application needs review: {application.questions_for_review}")
                  # For now, we proceed in 'shock and awe' mode unless critical
             
-            print("   🚀 Submitting application...")
+            logger.info("   🚀 Submitting application...")
             success = await self.submit_application(page)
             
             if success:
@@ -114,7 +115,7 @@ class AshbyFiller(BaseFiller):
                 return True
             else:
                  await page.screenshot(path="debug_ashby_submit_fail.png")
-                 print("   📸 Saved debug_ashby_submit_fail.png")
+                 logger.info("   📸 Saved debug_ashby_submit_fail.png")
                  raise Exception("Submission failed or verification timed out")
 
         except Exception as e:
@@ -122,21 +123,21 @@ class AshbyFiller(BaseFiller):
                 await page.screenshot(path="debug_ashby_error.png")
             except Exception:
                 pass
-            print(f"DEBUG: Ashby Fill Error: {e}")
+            logger.error(f"DEBUG: Ashby Fill Error: {e}")
             import traceback
             traceback.print_exc()
             application.fail(str(e))
             return False
 
     async def _fill_basic_info(self, page: Page, application: Application) -> bool:
-        print("   🔍 Searching for basic info fields (Name, Email, Phone)...")
+        logger.info("   🔍 Searching for basic info fields (Name, Email, Phone)...")
         
         # Strategy A: Ashby System Fields (High Priority)
         system_name = page.locator("input#_systemfield_name").first
         if await system_name.count() > 0:
             await system_name.fill(self.applicant.full_name)
             name_filled = True
-            print("      ✅ Filled Name via System ID")
+            logger.info("      ✅ Filled Name via System ID")
 
         # Strategy B: Full Name Field (General)
         if not name_filled:
@@ -146,7 +147,7 @@ class AshbyFiller(BaseFiller):
             if await name_input.count() > 0 and await name_input.is_visible():
                 await name_input.fill(self.applicant.full_name)
                 name_filled = True
-                print(f"      ✅ Filled Full Name: {self.applicant.full_name}")
+                logger.info(f"      ✅ Filled Full Name: {self.applicant.full_name}")
         
         # Strategy C: Split Name (First + Last)
         if not name_filled:
@@ -160,7 +161,7 @@ class AshbyFiller(BaseFiller):
                 await first_input.fill(self.applicant.first_name)
                 await last_input.fill(self.applicant.last_name)
                 name_filled = True
-                print(f"      ✅ Filled Split Names: {self.applicant.first_name} {self.applicant.last_name}")
+                logger.info(f"      ✅ Filled Split Names: {self.applicant.first_name} {self.applicant.last_name}")
 
         # Strategy D: Label-Based Search (Nuclear)
         if not name_filled:
@@ -175,7 +176,7 @@ class AshbyFiller(BaseFiller):
                         val = self.applicant.full_name if "First" not in label_text else self.applicant.first_name
                         await input_el.fill(val)
                         name_filled = True
-                        print(f"      ✅ Filled Name via Label '{label_text}'")
+                        logger.info(f"      ✅ Filled Name via Label '{label_text}'")
                         break
 
         # 2. EMAIL DETECTION
@@ -186,7 +187,7 @@ class AshbyFiller(BaseFiller):
         if await system_email.count() > 0:
             await system_email.fill(self.applicant.email)
             email_filled = True
-            print("      ✅ Filled Email via System ID")
+            logger.info("      ✅ Filled Email via System ID")
             
         if not email_filled:
             email_sel = self.SELECTORS["email"] + ", input[type='email'], input[placeholder*='email']"
@@ -239,11 +240,11 @@ class AshbyFiller(BaseFiller):
         for candidate in candidates:
             if candidate.exists():
                 resume_path = str(candidate.resolve())
-                print(f"   📁 Found resume at: {resume_path}")
+                logger.info(f"   📁 Found resume at: {resume_path}")
                 break
         
         if not resume_path:
-            print(f"   ❌ Resume not found! Tried: {[str(c) for c in candidates]}")
+            logger.error(f"   ❌ Resume not found! Tried: {[str(c) for c in candidates]}")
             return False
         
         # Try finding standard file input
@@ -251,10 +252,10 @@ class AshbyFiller(BaseFiller):
         if await file_input.count() > 0:
             try:
                 await file_input.set_input_files(resume_path)
-                print("   ✅ Resume uploaded via primary selector")
+                logger.info("   ✅ Resume uploaded via primary selector")
                 return True
             except Exception as e:
-                print(f"   ❌ Resume upload failed: {e}")
+                logger.error(f"   ❌ Resume upload failed: {e}")
         
         # Sometimes Ashby has a hidden input we need to unhide or just target directly
         all_file_inputs = page.locator("input[type='file']")
@@ -262,12 +263,12 @@ class AshbyFiller(BaseFiller):
         for i in range(count):
             try:
                 await all_file_inputs.nth(i).set_input_files(resume_path)
-                print(f"   ✅ Resume uploaded via fallback file input #{i}")
+                logger.info(f"   ✅ Resume uploaded via fallback file input #{i}")
                 return True
             except Exception:
                 continue
             
-        print("   ❌ No file input found for resume upload")
+        logger.error("   ❌ No file input found for resume upload")
         return False
 
     async def _fill_online_presence(self, page: Page) -> None:
@@ -299,7 +300,7 @@ class AshbyFiller(BaseFiller):
         question_blocks = page.locator("div:has(> label), fieldset:has(> label), div[class*='container']:has(label)")
         count = await question_blocks.count()
         
-        print(f"DEBUG: Found {count} potential question blocks")
+        logger.info(f"DEBUG: Found {count} potential question blocks")
 
         handled_inputs = set()
         for i in range(count):
@@ -322,7 +323,7 @@ class AshbyFiller(BaseFiller):
             if self._should_skip_question(question_text):
                 continue
                 
-            print(f"DEBUG: Processing question: '{question_text}'")
+            logger.info(f"DEBUG: Processing question: '{question_text}'")
             await asyncio.sleep(2) # Throttle to avoid LLM rate limits
             
             # Find input element within the block
@@ -345,7 +346,7 @@ class AshbyFiller(BaseFiller):
             # Skip if we already handled this specific input (primary for choice groups)
             input_id = await input_el.get_attribute("id") or await input_el.get_attribute("name")
             if input_id in handled_inputs:
-                print(f"   ⏩ Skipping already handled input: {input_id}")
+                logger.info(f"   ⏩ Skipping already handled input: {input_id}")
                 continue
             if input_id:
                 handled_inputs.add(input_id)
@@ -487,7 +488,7 @@ class AshbyFiller(BaseFiller):
                  return
              
              # Hidden input handling - NUCLEAR DOUBLE TAP
-             print(f"      ⚠️ Hidden radio/checkbox '{question_text}', attempting Double-Tap Label Click...")
+             logger.warning(f"      ⚠️ Hidden radio/checkbox '{question_text}', attempting Double-Tap Label Click...")
              
              # 1. Click parent label (forcefully)
              await element.evaluate("el => el.closest('label')?.click() || el.parentElement?.click()")
@@ -505,17 +506,17 @@ class AshbyFiller(BaseFiller):
              }""")
              
          except Exception as e:
-             print(f"      ❌ Standard check failed: {e}")
+             logger.error(f"      ❌ Standard check failed: {e}")
              # Fallback: Direct JS set
              try:
-                 print(f"      ☢️ Attempting JS Injection for checkbox '{question_text}'")
+                 logger.info(f"      ☢️ Attempting JS Injection for checkbox '{question_text}'")
                  await element.evaluate(f"el => el.checked = {'true' if target_state else 'false'}")
                  await element.evaluate("el => el.dispatchEvent(new Event('change', {bubbles: true}))")
              except Exception as e2:
-                 print(f"      ❌ JS Injection failed: {e2}")
+                 logger.error(f"      ❌ JS Injection failed: {e2}")
 
     async def _handle_choice_group(self, block, question: str, input_type: str) -> None:
-        print(f"DEBUG: Handling Choice Group ('{input_type}') for '{question}'")
+        logger.info(f"DEBUG: Handling Choice Group ('{input_type}') for '{question}'")
         
         # 1. Extract all options with their associated elements
         options = []
@@ -568,10 +569,10 @@ class AshbyFiller(BaseFiller):
                     input_map[clean_text] = inp
         
         if not options:
-            print("   ⚠️ Could not extract options for choice group.")
+            logger.warning("   ⚠️ Could not extract options for choice group.")
             return
 
-        print(f"   📋 Found options: {options}")
+        logger.info(f"   📋 Found options: {options}")
         
         # 2. Select best option via LLM or fallback
         best_option = None
@@ -587,9 +588,9 @@ class AshbyFiller(BaseFiller):
                     field_label=question,
                     applicant_context=context
                 )
-                print(f"   🤖 AI Selected: '{best_option}'")
+                logger.info(f"   🤖 AI Selected: '{best_option}'")
             except Exception as e:
-                print(f"   ⚠️ LLM selection failed: {e}")
+                logger.error(f"   ⚠️ LLM selection failed: {e}")
                 best_option = None
         
         # Fallback logic if LLM fails or is unavailable
@@ -602,7 +603,7 @@ class AshbyFiller(BaseFiller):
                 for opt in options:
                     if mapper_str in opt.lower() or opt.lower() in mapper_str:
                         best_option = opt
-                        print(f"   🔍 Mapper matched: '{best_option}'")
+                        logger.info(f"   🔍 Mapper matched: '{best_option}'")
                         break
             
             # Last resort: intelligent default
@@ -625,7 +626,7 @@ class AshbyFiller(BaseFiller):
                 # Ultimate fallback: first option
                 if not best_option:
                     best_option = options[0]
-                    print(f"   ⚠️ Using first option as fallback: '{best_option}'")
+                    logger.warning(f"   ⚠️ Using first option as fallback: '{best_option}'")
         
         # 3. Click the selected option
         if best_option and best_option in element_map:
@@ -635,7 +636,7 @@ class AshbyFiller(BaseFiller):
                 option_text=best_option
             )
         else:
-            print(f"   ❌ Could not find element for selected option: '{best_option}'")
+            logger.error(f"   ❌ Could not find element for selected option: '{best_option}'")
 
 
     async def _click_radio_option(self, click_target, input_element, option_text: str) -> None:
@@ -643,7 +644,7 @@ class AshbyFiller(BaseFiller):
         Robust radio button clicking with multiple fallback strategies.
         Prevents toggling by checking state first.
         """
-        print(f"   🎯 Selecting: '{option_text}'")
+        logger.info(f"   🎯 Selecting: '{option_text}'")
         
         # 0. Check if already selected (Prevent Toggling)
         is_active = await click_target.evaluate("""el => {
@@ -669,7 +670,7 @@ class AshbyFiller(BaseFiller):
         }""")
         
         if is_active:
-            print(f"   ✅ Option '{option_text}' already selected. Skipping click to avoid toggle.")
+            logger.info(f"   ✅ Option '{option_text}' already selected. Skipping click to avoid toggle.")
             return
 
         try:
@@ -682,29 +683,29 @@ class AshbyFiller(BaseFiller):
                 if input_element:
                     is_checked = await input_element.is_checked()
                     if is_checked:
-                        print(f"   ✅ Successfully selected '{option_text}'")
+                        logger.info(f"   ✅ Successfully selected '{option_text}'")
                         return
         except Exception as e:
-            print(f"   ⚠️ Standard click failed: {e}")
+            logger.error(f"   ⚠️ Standard click failed: {e}")
         
         # Strategy 2: JavaScript click on label
         try:
-            print("   🔧 Trying JS click...")
+            logger.info("   🔧 Trying JS click...")
             await click_target.evaluate("el => el.click()")
             await asyncio.sleep(0.2)
             
             if input_element:
                 is_checked = await input_element.is_checked()
                 if is_checked:
-                    print(f"   ✅ JS click successful for '{option_text}'")
+                    logger.info(f"   ✅ JS click successful for '{option_text}'")
                     return
         except Exception as e:
-            print(f"   ⚠️ JS click failed: {e}")
+            logger.error(f"   ⚠️ JS click failed: {e}")
         
         # Strategy 3: Direct input manipulation (nuclear option)
         if input_element:
             try:
-                print(f"   ☢️ Forcing radio input state for '{option_text}'")
+                logger.info(f"   ☢️ Forcing radio input state for '{option_text}'")
                 await input_element.evaluate("""el => {
                     el.checked = true;
                     el.dispatchEvent(new Event('change', {bubbles: true}));
@@ -712,9 +713,9 @@ class AshbyFiller(BaseFiller):
                     el.dispatchEvent(new Event('click', {bubbles: true}));
                 }""")
                 await asyncio.sleep(0.2)
-                print(f"   ✅ Force-set successful for '{option_text}'")
+                logger.info(f"   ✅ Force-set successful for '{option_text}'")
             except Exception as e:
-                print(f"   ❌ Force-set failed: {e}")
+                logger.error(f"   ❌ Force-set failed: {e}")
 
     async def _handle_textarea(self, element, question: str, job: Job, application: Application) -> None:
          # Similar to Greenhouse
@@ -749,10 +750,10 @@ class AshbyFiller(BaseFiller):
                  await element.fill(ans)
                  return
                  
-        print(f"   ⚠️ Could not determine answer for input: '{question}'")
+        logger.warning(f"   ⚠️ Could not determine answer for input: '{question}'")
 
     async def _verify_filled_state(self, page: Page) -> None:
-        print("   🕵️ Verifying form state before submission...")
+        logger.info("   🕵️ Verifying form state before submission...")
         
         # Re-scan for all question blocks
         # Using the robust selector we found earlier
@@ -827,7 +828,7 @@ class AshbyFiller(BaseFiller):
                 }""")
 
             if not is_filled:
-                print(f"   ⚠️ Field '{q_text}' appears EMPTY. Retrying...")
+                logger.warning(f"   ⚠️ Field '{q_text}' appears EMPTY. Retrying...")
                 # Call specific retry logic
                 await self._retry_fill(block, q_text)
 
@@ -857,7 +858,7 @@ class AshbyFiller(BaseFiller):
                 ans = await self.field_mapper.get_value(question) or " "
                 await input_el.evaluate(f"el => el.value = '{ans}'")
                 await input_el.evaluate("el => el.dispatchEvent(new Event('input', {bubbles: true}))")
-                print(f"      -> Forced JS fill for '{question}'")
+                logger.info(f"      -> Forced JS fill for '{question}'")
                 return
 
         if has_buttons:
@@ -873,9 +874,9 @@ class AshbyFiller(BaseFiller):
         settings = get_settings()
         
         if settings.application.review_mode:
-            print(f"   👀 REVIEW MODE ACTIVE (Value: {settings.application.review_mode})")
-            print("   👀 REVIEW MODE: Pausing before submission.")
-            print("   🛑 WAITING FOR USER INPUT: Review the form in the browser, then press Enter in this console to continue...")
+            logger.info(f"   👀 REVIEW MODE ACTIVE (Value: {settings.application.review_mode})")
+            logger.info("   👀 REVIEW MODE: Pausing before submission.")
+            logger.info("   🛑 WAITING FOR USER INPUT: Review the form in the browser, then press Enter in this console to continue...")
             # We can't actually capture console input here easily in this environment without blocking the agent loop weirdly.
             # But since we use 'WaitMsBeforeAsync' in run_command, we can't interact via stdin easily unless we use send_command_input.
             # However, for the 'Assisted Mode' workflow requested by the user, we just need to PAUSE.
@@ -885,28 +886,28 @@ class AshbyFiller(BaseFiller):
             # effectively 'Wait for user to manually click submit' OR 'Wait for user to signal continue'
             # But the user said "show me before submitting".
             
-            print("   🛑 AUTOMATION PAUSED. Please review the application.")
-            print("   👉 If everything looks good, YOU MUST click the 'Submit Application' button in the browser.")
-            print("   👉 The automation will NOT click it for you in this mode.")
+            logger.info("   🛑 AUTOMATION PAUSED. Please review the application.")
+            logger.info("   👉 If everything looks good, YOU MUST click the 'Submit Application' button in the browser.")
+            logger.info("   👉 The automation will NOT click it for you in this mode.")
             
             # Wait loop that checks if success page is reached (user clicked submit)
             # Wait efficiently for up to 30 minutes
             for i in range(1800): 
                 if i % 10 == 0:
-                     print(f"   ⏳ Waiting for YOU to submit... ({i}s)")
+                     logger.info(f"   ⏳ Waiting for YOU to submit... ({i}s)")
                 
                 if await self._check_success(page):
-                     print("   ✅ User submitted manually!")
+                     logger.info("   ✅ User submitted manually!")
                      return True
                 await asyncio.sleep(1)
                 
-            print("   ❌ Timeout waiting for user submission.")
+            logger.error("   ❌ Timeout waiting for user submission.")
             return False
 
         submit_btn = page.locator(self.SELECTORS["submit"]).first
         
         if await submit_btn.count() > 0:
-            print("   🚀 Clicking submit...")
+            logger.info("   🚀 Clicking submit...")
             await submit_btn.click()
             await asyncio.sleep(2)
             
@@ -917,17 +918,17 @@ class AshbyFiller(BaseFiller):
             # Check for spam block or generic failure
             msg = await page.content()
             if "spam" in msg.lower() or "captcha" in msg.lower() or await page.locator("text=spam").count() > 0:
-                print("   ⚠️ Application flagged or CAPTCHA detected!")
+                logger.warning("   ⚠️ Application flagged or CAPTCHA detected!")
                 # ASSISTED MODE: Wait for user
-                print("   🛑 WAITING FOR USER INPUT: Please solve CAPTCHA/Submit manually in the browser...")
+                logger.info("   🛑 WAITING FOR USER INPUT: Please solve CAPTCHA/Submit manually in the browser...")
                 
                 # Wait loop
                 for i in range(120): # 10 minutes max
                     if i % 10 == 0:
-                         print(f"   ⏳ Waiting for success URL... ({i*5}s)")
+                         logger.info(f"   ⏳ Waiting for success URL... ({i*5}s)")
                     
                     if await self._check_success(page):
-                        print("   ✅ Detected manual success!")
+                        logger.info("   ✅ Detected manual success!")
                         return True
                     
                     await asyncio.sleep(5)
@@ -953,7 +954,7 @@ class AshbyFiller(BaseFiller):
         if not value:
             return False
         
-        print(f"DEBUG: Handling Autocomplete for '{question}' with '{value}'")
+        logger.info(f"DEBUG: Handling Autocomplete for '{question}' with '{value}'")
         
         try:
             # 1. Click to Focus
@@ -993,7 +994,7 @@ class AshbyFiller(BaseFiller):
                            break
                       
                       # Fallback: click first
-                      print(f"   -> Clicking visible suggestion fallback: {sel}")
+                      logger.info(f"   -> Clicking visible suggestion fallback: {sel}")
                       await suggestions.first.click()
                       suggestion_clicked = True
                       break
@@ -1002,14 +1003,14 @@ class AshbyFiller(BaseFiller):
             
             # 4. Fallback: Enter
             if not suggestion_clicked:
-                 print("   -> No suggestion clicked, using Keyboard Enter")
+                 logger.info("   -> No suggestion clicked, using Keyboard Enter")
                  await field.press("Enter")
             
             # 5. NUCLEAR OPTION: JS Injection (React Event Dispatch)
             # If the value isn't sticking, we force it.
             val_in_field = await field.input_value()
             if not val_in_field or len(val_in_field) < 2:
-                 print(f"   ☢️ Autocomplete failed via typing... attempting JS Injection for '{value}'")
+                 logger.error(f"   ☢️ Autocomplete failed via typing... attempting JS Injection for '{value}'")
                  await field.page.evaluate("""(data) => {
                     const input = document.querySelector(data.selector);
                     if (!input) return false;
@@ -1028,11 +1029,11 @@ class AshbyFiller(BaseFiller):
                  
             return True
         except Exception as e:
-            print(f"   ❌ Autocomplete Error: {e}")
+            logger.error(f"   ❌ Autocomplete Error: {e}")
             return False
 
     async def _handle_button_group(self, block, question: str) -> None:
-        print(f"DEBUG: Handling Button Group for '{question}'")
+        logger.info(f"DEBUG: Handling Button Group for '{question}'")
         
         # Extract button options with a broad reach
         buttons = await block.locator("button, div[role='button'], label, [class*='option'], [class*='button']").all()
@@ -1070,7 +1071,7 @@ class AshbyFiller(BaseFiller):
                     element_map[target] = btn
         
         if not options:
-            print("   ⚠️ No button options found")
+            logger.warning("   ⚠️ No button options found")
             return
         
         # Use LLM to select best option
@@ -1086,9 +1087,9 @@ class AshbyFiller(BaseFiller):
                     field_label=question, 
                     applicant_context=context
                 )
-                print(f"   🤖 AI Selected: '{selected_option}'")
+                logger.info(f"   🤖 AI Selected: '{selected_option}'")
             except Exception as e:
-                print(f"   ⚠️ LLM failed: {e}")
+                logger.error(f"   ⚠️ LLM failed: {e}")
                 selected_option = None
         
         # Fallback to boolean logic
@@ -1097,7 +1098,7 @@ class AshbyFiller(BaseFiller):
             if val is None:
                 val = True
             selected_option = "Yes" if val else "No"
-            print(f"   🔍 Using fallback selection: '{selected_option}'")
+            logger.info(f"   🔍 Using fallback selection: '{selected_option}'")
         
         # Click the selected button
         if selected_option in element_map:
@@ -1122,4 +1123,4 @@ class AshbyFiller(BaseFiller):
                  option_text=selected_option
              )
         else:
-             print(f"   ❌ Could not find element for selected option: '{selected_option}'")
+             logger.error(f"   ❌ Could not find element for selected option: '{selected_option}'")

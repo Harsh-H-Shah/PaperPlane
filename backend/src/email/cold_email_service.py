@@ -15,6 +15,7 @@ from src.email.email_templates import TemplateManager, get_template_variables
 from src.email.email_personalizer import EmailPersonalizer
 from src.email.email_scheduler import EmailScheduler
 from src.email.email_sender import EmailSender
+from src.utils.logger import logger
 
 
 class ColdEmailService:
@@ -53,7 +54,7 @@ class ColdEmailService:
         }
         
         # 1. Scrape contacts
-        print(f"   🔍 Searching for contacts at {job.company}...")
+        logger.info(f"   🔍 Searching for contacts at {job.company}...")
         contacts = await self.scraper.search_contacts(
             company=job.company,
             personas=personas,
@@ -61,7 +62,7 @@ class ColdEmailService:
         )
         
         if not contacts:
-            print(f"   ⚠️ No contacts found for {job.company}")
+            logger.warning(f"   ⚠️ No contacts found for {job.company}")
             return result
         
         result["contacts_found"] = len(contacts)
@@ -85,7 +86,7 @@ class ColdEmailService:
             scheduled = self.scheduler.schedule_batch(emails)
             result["emails_scheduled"] = len(scheduled)
         
-        print(f"   ✅ Campaign created: {result['emails_scheduled']} emails scheduled")
+        logger.info(f"   ✅ Campaign created: {result['emails_scheduled']} emails scheduled")
         return result
     
     async def _create_email_for_contact(

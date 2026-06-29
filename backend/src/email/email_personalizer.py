@@ -5,6 +5,7 @@ Creates context-aware openers based on recipient role, company, and job.
 
 from src.core.cold_email_models import Contact, ContactPersona
 from src.llm.gemini import GeminiClient
+from src.utils.logger import logger
 
 
 class EmailPersonalizer:
@@ -17,7 +18,7 @@ class EmailPersonalizer:
             try:
                 self.llm_client = GeminiClient()
             except Exception as e:
-                print(f"   ⚠️ EmailPersonalizer: LLM not available: {e}")
+                logger.warning(f"   ⚠️ EmailPersonalizer: LLM not available: {e}")
     
     async def generate_personalized_hook(
         self,
@@ -51,7 +52,7 @@ class EmailPersonalizer:
                 return hook
                 
         except Exception as e:
-            print(f"   ⚠️ Personalization error: {e}")
+            logger.error(f"   ⚠️ Personalization error: {e}")
         
         return self._get_fallback_hook(contact)
     

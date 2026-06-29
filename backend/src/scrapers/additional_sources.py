@@ -8,6 +8,7 @@ from src.scrapers.base_scraper import BaseScraper
 from src.scrapers.scraper_utils import parse_date_string
 from src.core.job import Job, JobSource
 from src.utils.config import get_settings
+from src.utils.logger import logger
 
 # Suppress XML parsing warning for RSS feeds
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
@@ -55,9 +56,9 @@ class BuiltInScraper(BaseScraper):
         is_authenticated = bool(cookies)
         
         if is_authenticated:
-            print("   🔐 BuiltIn: Using authenticated session")
+            logger.info("   🔐 BuiltIn: Using authenticated session")
         else:
-            print("   ⚠️ BuiltIn: No session cookies - apply URLs may not work. Set BUILTIN_SESSION in .env")
+            logger.warning("   ⚠️ BuiltIn: No session cookies - apply URLs may not work. Set BUILTIN_SESSION in .env")
         
         async with httpx.AsyncClient(cookies=cookies) as client:
             headers = {
@@ -80,7 +81,7 @@ class BuiltInScraper(BaseScraper):
                         )
                         jobs.extend(new_jobs)
                 except Exception as e:
-                    print(f"Error fetching BuiltIn URL {url}: {e}")
+                    logger.error(f"Error fetching BuiltIn URL {url}: {e}")
         
         self.jobs_found = len(jobs)
         # Deduplicate by URL
@@ -136,7 +137,7 @@ class BuiltInScraper(BaseScraper):
             
             return None
         except Exception as e:
-            print(f"      Error fetching apply URL for {job_url}: {e}")
+            logger.error(f"      Error fetching apply URL for {job_url}: {e}")
             return None
     
     async def _parse_html_with_apply_urls(
@@ -183,7 +184,7 @@ class BuiltInScraper(BaseScraper):
                     real_url = await self._fetch_real_apply_url(client, headers, url)
                     if real_url:
                         apply_url = real_url
-                        print(f"      ✅ Got real apply URL for {company}: {real_url[:60]}...")
+                        logger.info(f"      ✅ Got real apply URL for {company}: {real_url[:60]}...")
                 
                 job = Job(
                     title=title,

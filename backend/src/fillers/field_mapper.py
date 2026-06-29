@@ -2,6 +2,7 @@ import re
 import asyncio
 from typing import Optional, Any
 from src.core.applicant import Applicant
+from src.utils.logger import logger
 
 
 class FieldMapper:
@@ -97,7 +98,7 @@ class FieldMapper:
             
         # 3. LLM Fallback
         if self.llm_client:
-            print(f"   🤖 Invoking LLM for field: '{field_label}'...")
+            logger.info(f"   🤖 Invoking LLM for field: '{field_label}'...")
             context = self._get_applicant_context()
             
             # STRATEGY: maximizing acceptance chances.
@@ -119,14 +120,14 @@ Return ONLY the value. If not found/applicable, return "None"."""
                 
                 if response:
                     if "None" not in response and len(response) < 100:
-                         print(f"      -> LLM suggested: {response}")
+                         logger.info(f"      -> LLM suggested: {response}")
                          self._cache[normalized] = response
                          return response
                     break # returned None/valid response, don't retry same non-error result
                 
                 # If response is None (rate limit), retry
                 if attempt < 1:
-                     print(f"     ⏳ LLM empty response (Attempt {attempt+1}/2), waiting briefly...")
+                     logger.info(f"     ⏳ LLM empty response (Attempt {attempt+1}/2), waiting briefly...")
                      await asyncio.sleep(1)
         
         return None
@@ -286,11 +287,11 @@ Skills: {self.applicant.get_skills_string(30)}
         
         # 2. Try LLM
         if self.llm_client:
-            print(f"   🤖 Invoking LLM for dropdown: '{field_label}' with {len(options)} options. Sample: {options[:5]}...")
+            logger.info(f"   🤖 Invoking LLM for dropdown: '{field_label}' with {len(options)} options. Sample: {options[:5]}...")
             context = self._get_applicant_context()
             val = await self.llm_client.select_best_option(options, field_label, context)
             if val:
-                 print(f"      -> LLM selected: {val}")
+                 logger.info(f"      -> LLM selected: {val}")
             return val
         
         return None

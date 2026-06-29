@@ -12,6 +12,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 
 from src.core.cold_email_models import Contact, ContactPersona, ContactSource
+from src.utils.logger import logger
 
 
 # Job titles that indicate hiring-relevant roles
@@ -51,9 +52,9 @@ class ApolloScraper:
         self.use_api_key = bool(self.api_key)
         
         if not self.enabled:
-            print("   ⚠️ Apollo: No API key or cookies found. Set APOLLO_API_KEY or APOLLO_COOKIES in .env")
-            print("      Get API key: https://app.apollo.io/#/settings/integrations/api")
-            print("      OR use cookies: Copy _leadgenie_session, X-CSRF-TOKEN, _cf_bm from browser DevTools")
+            logger.warning("   ⚠️ Apollo: No API key or cookies found. Set APOLLO_API_KEY or APOLLO_COOKIES in .env")
+            logger.info("      Get API key: https://app.apollo.io/#/settings/integrations/api")
+            logger.info("      OR use cookies: Copy _leadgenie_session, X-CSRF-TOKEN, _cf_bm from browser DevTools")
     
     def _get_headers(self) -> dict:
         if self.use_api_key:
@@ -91,13 +92,13 @@ class ApolloScraper:
     ) -> list[Contact]:
         """Search for contacts at a company"""
         if not self.enabled:
-            print("   ⚠️ Apollo: Not enabled (no API key or cookies)")
+            logger.warning("   ⚠️ Apollo: Not enabled (no API key or cookies)")
             return []
         
         if self.use_api_key:
-            print("   🔑 Using Apollo API key authentication")
+            logger.info("   🔑 Using Apollo API key authentication")
         else:
-            print("   🍪 Using Apollo cookie authentication")
+            logger.info("   🍪 Using Apollo cookie authentication")
         
         contacts = []
         personas = personas or [
@@ -118,16 +119,16 @@ class ApolloScraper:
                 
                 if not contacts and not self.use_api_key:
                     # Fallback to web scraping (only if using cookies)
-                    print("   🌐 Falling back to web scraping...")
+                    logger.info("   🌐 Falling back to web scraping...")
                     web_contacts = await self._search_via_web(client, company, limit)
                     contacts.extend([c for c in web_contacts if c.persona in personas])
                     
         except Exception as e:
             import traceback
-            print(f"   ❌ Apollo error: {e}")
-            print(f"   Traceback: {traceback.format_exc()}")
+            logger.error(f"   ❌ Apollo error: {e}")
+            logger.error(f"   Traceback: {traceback.format_exc()}")
         
-        print(f"   📋 Apollo: Found {len(contacts)} contacts at {company}")
+        logger.info(f"   📋 Apollo: Found {len(contacts)} contacts at {company}")
         return contacts[:limit]
     
     async def _search_via_api(
@@ -164,23 +165,23 @@ class ApolloScraper:
                 query_string = "&".join(query_parts)
                 url = f"{self.API_URL}/mixed_people/api_search?{query_string}"
                 
-                print(f"      Apollo API: Searching for contacts at {company}")
-                print(f"      Apollo API: URL = {url.split('?')[0]}?[query params]")
+                logger.info(f"      Apollo API: Searching for contacts at {company}")
+                logger.info(f"      Apollo API: URL = {url.split('?')[0]}?[query params]")
                 
                 response = await client.post(
                     url,
                     headers=self._get_headers()
                 )
                 
-                print(f"      Apollo API: Response status = {response.status_code}")
+                logger.info(f"      Apollo API: Response status = {response.status_code}")
                 
                 if response.status_code == 200:
                     data = response.json()
                     people = data.get("people", [])
                     
-                    print(f"      Apollo API: Found {len(people)} people (before enrichment)")
+                    logger.info(f"      Apollo API: Found {len(people)} people (before enrichment)")
                     if len(people) > 0:
-                        print(f"      Apollo API: Sample person keys = {list(people[0].keys()) if people else 'N/A'}")
+                        logger.info(f"      Apollo API: Sample person keys = {list(people[0].keys()) if people else 'N/A'}")
                     
                     # The search endpoint doesn't return emails, so we need to enrich
                     # Limit enrichment to avoid too many API calls and rate limits
@@ -190,7 +191,7 @@ class ApolloScraper:
                         # Apollo might use different field names - try both
                         person_id = person.get("id") or person.get("person_id") or person.get("apollo_id")
                         if not person_id:
-                            print(f"      Warning: Person missing ID field: {list(person.keys())}")
+                            logger.warning(f"      Warning: Person missing ID field: {list(person.keys())}")
                             continue
                         
                         # Try to enrich to get email
@@ -205,36 +206,36 @@ class ApolloScraper:
                             if contact:
                                 contacts.append(contact)
                     
-                    print(f"      Apollo API: Successfully enriched {enriched_count}/{min(len(people), enrich_limit)} people")
+                    logger.info(f"      Apollo API: Successfully enriched {enriched_count}/{min(len(people), enrich_limit)} people")
                 elif response.status_code == 401:
-                    print("      Apollo API error: Unauthorized (401) - Check your API key")
-                    print(f"      Response: {response.text[:300]}")
+                    logger.error("      Apollo API error: Unauthorized (401) - Check your API key")
+                    logger.info(f"      Response: {response.text[:300]}")
                 elif response.status_code == 403:
-                    print("      Apollo API error: Forbidden (403) - API key may not have required permissions")
-                    print(f"      Response: {response.text[:300]}")
+                    logger.error("      Apollo API error: Forbidden (403) - API key may not have required permissions")
+                    logger.info(f"      Response: {response.text[:300]}")
                 else:
                     error_text = response.text[:500] if response.text else "No error message"
-                    print(f"      Apollo API error: Status {response.status_code}")
-                    print(f"      Response: {error_text}")
+                    logger.error(f"      Apollo API error: Status {response.status_code}")
+                    logger.info(f"      Response: {error_text}")
                     # Try to parse as JSON for better error message
                     try:
                         error_json = response.json()
                         if "error" in error_json:
-                            print(f"      Error message: {error_json.get('error')}")
+                            logger.error(f"      Error message: {error_json.get('error')}")
                     except Exception:
                         pass
             else:
                 # Fallback: Use cookie-based web scraping method
-                print("      Using cookie-based web scraping (free method)")
+                logger.info("      Using cookie-based web scraping (free method)")
                 
                 # Try HTML scraping first (more reliable with cookies)
                 web_contacts = await self._search_via_web(client, company, limit)
                 if web_contacts:
                     contacts.extend(web_contacts)
-                    print(f"      Cookie method: Found {len(web_contacts)} contacts via HTML scraping")
+                    logger.info(f"      Cookie method: Found {len(web_contacts)} contacts via HTML scraping")
                 else:
                     # If HTML scraping failed, try API endpoints as fallback
-                    print("      HTML scraping found nothing, trying API endpoints...")
+                    logger.info("      HTML scraping found nothing, trying API endpoints...")
                     title_keywords = []
                     for keywords in PERSONA_KEYWORDS.values():
                         title_keywords.extend(keywords[:2])
@@ -266,29 +267,29 @@ class ApolloScraper:
                                 people = data.get("people", []) or data.get("results", [])
                                 
                                 if people:
-                                    print(f"      Cookie API: Found {len(people)} people via {endpoint}")
+                                    logger.info(f"      Cookie API: Found {len(people)} people via {endpoint}")
                                     for person in people:
                                         contact = self._parse_person(person, company)
                                         if contact:
                                             contacts.append(contact)
                                     break
                             elif response.status_code in [401, 403]:
-                                print(f"      Endpoint {endpoint}: Auth failed ({response.status_code})")
+                                logger.error(f"      Endpoint {endpoint}: Auth failed ({response.status_code})")
                         except Exception as e:
-                            print(f"      Endpoint {endpoint} error: {e}")
+                            logger.error(f"      Endpoint {endpoint} error: {e}")
                             continue
                     
                     if not contacts:
-                        print("      ⚠️ All methods failed. Possible reasons:")
-                        print("         1. Cookies expired - refresh from browser")
-                        print("         2. Apollo changed their endpoints")
-                        print("         3. Account restrictions (free tier limitations)")
-                        print("      💡 Tip: Try manual contact entry or use LinkedIn/company websites")
+                        logger.error("      ⚠️ All methods failed. Possible reasons:")
+                        logger.info("         1. Cookies expired - refresh from browser")
+                        logger.info("         2. Apollo changed their endpoints")
+                        logger.info("         3. Account restrictions (free tier limitations)")
+                        logger.info("      💡 Tip: Try manual contact entry or use LinkedIn/company websites")
                         
         except Exception as e:
             import traceback
-            print(f"      Apollo API error: {e}")
-            print(f"      Traceback: {traceback.format_exc()}")
+            logger.error(f"      Apollo API error: {e}")
+            logger.error(f"      Traceback: {traceback.format_exc()}")
         
         return contacts
     
@@ -326,9 +327,9 @@ class ApolloScraper:
                     return person
             else:
                 error_text = response.text[:200] if response.text else "No error message"
-                print(f"      Enrichment error: Status {response.status_code}, Response: {error_text}")
+                logger.error(f"      Enrichment error: Status {response.status_code}, Response: {error_text}")
         except Exception as e:
-            print(f"      Enrichment exception: {e}")
+            logger.error(f"      Enrichment exception: {e}")
         
         return None
     
@@ -343,7 +344,7 @@ class ApolloScraper:
         
         try:
             # Step 1: Load the main Apollo page to establish session
-            print("      Loading Apollo homepage to establish session...")
+            logger.info("      Loading Apollo homepage to establish session...")
             response = await client.get(
                 f"{self.BASE_URL}/",
                 headers=self._get_headers(),
@@ -352,7 +353,7 @@ class ApolloScraper:
             )
             
             if response.status_code != 200:
-                print(f"      Failed to load Apollo homepage: {response.status_code}")
+                logger.error(f"      Failed to load Apollo homepage: {response.status_code}")
                 return contacts
             
             # Step 2: Try to access the people search page
@@ -365,7 +366,7 @@ class ApolloScraper:
             
             for search_url in search_urls:
                 try:
-                    print(f"      Trying: {search_url}")
+                    logger.info(f"      Trying: {search_url}")
                     response = await client.get(
                         search_url,
                         headers=self._get_headers(),
@@ -377,26 +378,26 @@ class ApolloScraper:
                         html_contacts = self._extract_contacts_from_html(response.text, company)
                         if html_contacts:
                             contacts.extend(html_contacts)
-                            print(f"      Found {len(html_contacts)} contacts in HTML")
+                            logger.info(f"      Found {len(html_contacts)} contacts in HTML")
                             break
                 except Exception as e:
-                    print(f"      URL {search_url} error: {e}")
+                    logger.error(f"      URL {search_url} error: {e}")
                     continue
             
             # Step 3: If HTML extraction failed, try to find API calls in the page
             if not contacts:
-                print("      HTML extraction found nothing, checking for API endpoints in page...")
+                logger.info("      HTML extraction found nothing, checking for API endpoints in page...")
                 # Look for API endpoints in JavaScript/network calls
                 # This is a fallback - Apollo might load data via AJAX after page load
                 # We'd need a browser automation tool (like Playwright) for this
-                print("      Note: Apollo may load contacts via JavaScript after page load")
-                print("      Consider using browser automation (Playwright/Selenium) for better results")
+                logger.info("      Note: Apollo may load contacts via JavaScript after page load")
+                logger.info("      Consider using browser automation (Playwright/Selenium) for better results")
                 
         except Exception as e:
 
-            print(f"      Web scraping error: {e}")
+            logger.error(f"      Web scraping error: {e}")
             if "timeout" in str(e).lower():
-                print("      Timeout - Apollo may be slow or blocking requests")
+                logger.info("      Timeout - Apollo may be slow or blocking requests")
         
         return contacts
     
@@ -455,7 +456,7 @@ class ApolloScraper:
                                 if contact:
                                     contacts.append(contact)
                         if contacts:
-                            print(f"      Extracted {len(contacts)} contacts from Apollo state")
+                            logger.info(f"      Extracted {len(contacts)} contacts from Apollo state")
                             break
                     except json.JSONDecodeError:
                         continue
@@ -492,7 +493,7 @@ class ApolloScraper:
                         pass
                             
         except Exception as e:
-            print(f"      HTML extraction error: {e}")
+            logger.error(f"      HTML extraction error: {e}")
         
         return contacts
     
