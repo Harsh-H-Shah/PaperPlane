@@ -3,20 +3,17 @@ import asyncio
 
 from src.scrapers.base_scraper import BaseScraper
 from src.scrapers.simplify import SimplifyScraper
-from src.scrapers.cvrve import CVRVEScraper
 from src.scrapers.jobright import JobrightScraper
 from src.scrapers.additional_sources import BuiltInScraper
 from src.scrapers.link_validator import get_link_validator, get_incremental_scraper
-# New scrapers
-from src.scrapers.careerjet import CareerjetScraper
 from src.scrapers.greenhouse_jobs import GreenhouseJobsScraper
-from src.scrapers.google_jobs import GoogleJobsScraper
-from src.scrapers.glassdoor import GlassdoorScraper
-from src.scrapers.levelsfyi import LevelsfyiScraper
-from src.scrapers.duckduckgo_search import DuckDuckGoScraper
+from src.scrapers.company_boards import CompanyBoardsScraper
+from src.scrapers.speedyapply import SpeedyApplyScraper
+from src.scrapers.public_boards import PublicBoardsScraper
 from src.core.job import Job
 from src.utils.config import get_settings
 from src.utils.database import get_db
+from src.utils.logger import logger
 
 
 class JobAggregator:
@@ -35,29 +32,17 @@ class JobAggregator:
         
         if scraper_config.simplify.enabled:
             self.scrapers.append(SimplifyScraper())
-        
-        if scraper_config.cvrve.enabled:
-            self.scrapers.append(CVRVEScraper())
-        
-        
+
+        if scraper_config.company_boards.enabled:
+            self.scrapers.append(CompanyBoardsScraper())
+
         self.scrapers.append(JobrightScraper())
         self.scrapers.append(BuiltInScraper())
-        
-        # New scrapers
-        self.scrapers.append(CareerjetScraper())
         self.scrapers.append(GreenhouseJobsScraper())
-        self.scrapers.append(GoogleJobsScraper())
-        self.scrapers.append(GlassdoorScraper())
-        self.scrapers.append(LevelsfyiScraper())
-        
-        # Free semantic search scraper (no API key needed)
-        try:
-            self.scrapers.append(DuckDuckGoScraper())
-        except ImportError:
-            # DuckDuckGo scraper not available (missing dependency)
-            pass
-    
-    async def scrape_all(self, keywords: list[str] = None, location: str = None, limit_per_source: int = 100) -> dict:
+        self.scrapers.append(SpeedyApplyScraper())
+        self.scrapers.append(PublicBoardsScraper())
+
+    async def scrape_all(self, keywords: list[str] = None, location: str = None, limit_per_source: int = 800) -> dict:
         keywords = keywords or self.settings.search.titles
         locations = self.settings.search.locations
         location = location or (locations[0] if locations else "")
@@ -72,12 +57,15 @@ class JobAggregator:
             "already_seen": 0,
         }
         
-        tasks = [scraper.scrape(keywords, location, limit_per_source) for scraper in self.scrapers]
+        tasks = [
+            scraper.scrape(keywords, location, min(limit_per_source, scraper.MAX_LIMIT or limit_per_source))
+            for scraper in self.scrapers
+        ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         for scraper, result in zip(self.scrapers, results):
             if isinstance(result, Exception):
-                print(f"Error from {scraper.SOURCE_NAME}: {result}")
+                logger.error(f"Error from {scraper.SOURCE_NAME}: {result}")
                 stats["sources"].append({"name": scraper.SOURCE_NAME, "found": 0, "new": 0, "error": str(result)})
             else:
                 all_jobs.extend(result)
@@ -137,20 +125,17 @@ class JobAggregator:
         
         scraper_map = {
             "simplify": SimplifyScraper,
-            "cvrve": CVRVEScraper,
             "jobright": JobrightScraper,
             "builtin": BuiltInScraper,
-            # New scrapers
-            "careerjet": CareerjetScraper,
             "greenhouse": GreenhouseJobsScraper,
             "greenhousejobs": GreenhouseJobsScraper,
-            "google": GoogleJobsScraper,
-            "googlejobs": GoogleJobsScraper,
-            "glassdoor": GlassdoorScraper,
-            "levelsfyi": LevelsfyiScraper,
-            "levels": LevelsfyiScraper,
-            "duckduckgo": DuckDuckGoScraper,
-            "ddg": DuckDuckGoScraper,
+            "company_boards": CompanyBoardsScraper,
+            "companyboards": CompanyBoardsScraper,
+            "companies": CompanyBoardsScraper,
+            "speedyapply": SpeedyApplyScraper,
+            "public_boards": PublicBoardsScraper,
+            "publicboards": PublicBoardsScraper,
+            "remote": PublicBoardsScraper,
         }
         
         scraper_class = scraper_map.get(source_lower)
@@ -170,7 +155,7 @@ class JobAggregator:
             if not self.validator:
                 self.validator = get_link_validator()
             valid_jobs, invalid = await self.validator.validate_jobs(new_jobs)
-            print(f"Validated {len(new_jobs)} jobs: {len(valid_jobs)} valid, {len(invalid)} invalid")
+            logger.info(f"Validated {len(new_jobs)} jobs: {len(valid_jobs)} valid, {len(invalid)} invalid")
             new_jobs = valid_jobs
         
         # Check DB existence in bulk

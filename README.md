@@ -6,9 +6,11 @@ PaperPlane is a free, open-source tool that automates the job application proces
 
 ## ✨ Features
 
-- **Multi-Source Job Discovery**: Aggregates jobs from LinkedIn, Jobright, Simplify, CVRVE, BuiltIn, Dice, Y Combinator, and more
+- **Multi-Source Job Discovery**: Aggregates jobs from Simplify, Jobright, BuiltIn, a curated list of top-company ATS boards (Greenhouse/Lever/Ashby/Workday/SmartRecruiters/Workable), SpeedyApply, and public remote boards (We Work Remotely, Himalayas, RemoteOK, Remotive, Jobicy, USAJOBS, and more)
+- **Precision Filtering**: A shared software-role classifier casts a wide net across sources while excluding non-engineering roles, plus a seniority gate that drops senior/lead/staff/principal+ postings for junior/new-grad search
 - **Smart Application Categorization**: Recognizes Workday, Ashby, ADP, Oracle, Greenhouse, Lever, and custom forms
 - **Intelligent Form Filling**: Auto-fills applications using your profile data
+- **Standalone Autofill Extension**: A Chrome (MV3) extension in [`extension/`](extension/) that fills any job application form from your profile independent of the backend, with LLM help for open-ended questions
 - **LLM-Powered Responses**: Uses Gemini Pro (or other LLMs) for open-ended questions
 - **Human-in-the-Loop**: Notifies you via Discord/ntfy when manual input is required
 - **Resume Generation**: Creates tailored PDF resumes for specific job types
@@ -78,6 +80,18 @@ cd backend && python main.py dashboard
 cd frontend && npm run dev
 ```
 
+### Browser extension (optional)
+
+A standalone Chrome extension in [`extension/`](extension/) can fill forms without the backend running:
+
+```bash
+cd extension
+npm install
+npm run build   # outputs to dist/
+```
+
+Load `extension/dist` as an unpacked extension via `chrome://extensions`. See [extension/README.md](extension/README.md) for setup.
+
 ## 📋 CLI Commands
 
 | Command | Description |
@@ -110,6 +124,9 @@ All configuration is managed via environment variables (`.env` file):
 - `DISCORD_WEBHOOK_URL`: Discord webhook for notifications
 - `NTFY_TOPIC`: ntfy.sh topic for mobile notifications
 - `EMAIL_USER` / `EMAIL_PASSWORD`: For email verification code extraction
+- `USAJOBS_API_KEY` / `USAJOBS_EMAIL`: Optional, unlocks the US federal jobs source (free key at [developer.usajobs.gov](https://developer.usajobs.gov/apirequest/))
+
+Top-company ATS boards are curated in [`config/company_boards.yaml`](config/company_boards.yaml) — add a company with one line. See [docs/JOB_INGESTION_PLAN.md](docs/JOB_INGESTION_PLAN.md) for the job-sourcing roadmap.
 
 See [DOCS.md](DOCS.md) for full documentation and [HOSTING.md](HOSTING.md) for deployment guide.
 

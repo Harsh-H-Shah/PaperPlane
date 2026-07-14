@@ -2,7 +2,6 @@
 
 import asyncio
 import sys
-from pathlib import Path
 from typing import Optional
 
 import typer
@@ -13,6 +12,7 @@ from rich import print as rprint
 
 from src.utils.config import get_settings, Settings
 from src.utils.database import get_db
+from src.utils import paths
 from src.core.applicant import Applicant
 from src.core.job import JobStatus
 
@@ -27,16 +27,16 @@ def init():
     settings = get_settings()
     settings.ensure_directories()
     
-    profile_path = Path("data/profile.json")
-    example_path = Path("data/profile.example.json")
-    
+    profile_path = paths.profile_path()
+    example_path = paths.data_dir() / "profile.example.json"
+
     if not profile_path.exists() and example_path.exists():
         import shutil
         shutil.copy(example_path, profile_path)
         console.print("✅ Created [cyan]data/profile.json[/cyan]")
-    
-    env_path = Path(".env")
-    env_example = Path(".env.example")
+
+    env_path = paths.env_file()
+    env_example = paths.repo_root() / ".env.example"
     
     if not env_path.exists() and env_example.exists():
         import shutil
@@ -57,7 +57,7 @@ def status():
     config_table.add_column("Item", style="cyan")
     config_table.add_column("Status", style="green")
     
-    profile_path = Path("data/profile.json")
+    profile_path = paths.profile_path()
     if profile_path.exists():
         try:
             applicant = Applicant.from_file(profile_path)
@@ -66,8 +66,8 @@ def status():
             config_table.add_row("Profile", f"⚠️ Error: {e}")
     else:
         config_table.add_row("Profile", "❌ Not found")
-    
-    resume_path = Path("data/resume.pdf")
+
+    resume_path = paths.resume_path()
     config_table.add_row("Resume", "✅ Found" if resume_path.exists() else "❌ Not found")
     config_table.add_row("Gemini API Key", "✅ Configured" if settings.gemini_api_key else "❌ Not set")
     
@@ -179,7 +179,7 @@ def apply(
     settings = get_settings()
     settings.browser.headless = not visible
     
-    if not Path("data/profile.json").exists():
+    if not paths.profile_path().exists():
         console.print("[red]❌ Profile not found! Run init first.[/red]")
         return
     
@@ -228,7 +228,7 @@ def apply_url(
         from src.core.application import Application
         from src.classifiers.detector import detect_application_type
         
-        profile_path = Path("data/profile.json")
+        profile_path = paths.profile_path()
         if not profile_path.exists():
             console.print("[red]❌ Profile not found![/red]")
             return
@@ -440,62 +440,6 @@ def dashboard(
         console.print(f"[red]Error: {e}[/red]")
 
 
-@app.command()
-def scheduler(
-    action: str = typer.Argument(...),
-    interval: float = typer.Option(3.0, "--interval", "-i"),
-):
-    if action == "start":
-        console.print(f"\n🚀 [bold blue]Starting Job Scheduler (every {interval}h)...[/bold blue]\n")
-        console.print("[dim]Press Ctrl+C to stop[/dim]\n")
-        
-        async def run():
-            from src.scheduler.scheduler import start_scheduler
-            await start_scheduler(interval_hours=interval)
-        
-        try:
-            asyncio.run(run())
-        except KeyboardInterrupt:
-            console.print("\n[yellow]Scheduler stopped[/yellow]")
-    
-    elif action == "run":
-        console.print(f"\n🔍 [bold blue]Running single scrape...[/bold blue]\n")
-        
-        async def run_once():
-            from src.scheduler.scheduler import run_scrape_once
-            result = await run_scrape_once()
-            return result
-        
-        try:
-            asyncio.run(run_once())
-        except Exception as e:
-            console.print(f"[red]Error: {e}[/red]")
-    
-    elif action == "status":
-        console.print(f"\n📊 [bold blue]Scheduler Status[/bold blue]\n")
-        
-        from src.scheduler.scheduler import get_scheduler
-        sched = get_scheduler()
-        stats = sched.get_stats()
-        
-        table = Table()
-        table.add_column("Metric", style="cyan")
-        table.add_column("Value", style="yellow")
-        
-        table.add_row("Running", "✅ Yes" if stats["running"] else "❌ No")
-        table.add_row("Interval", f"{stats['interval_hours']}h")
-        table.add_row("Total Runs", str(stats["run_count"]))
-        table.add_row("Last Run", stats["last_run"] or "Never")
-        table.add_row("Total Jobs Found", str(stats["total_jobs_found"]))
-        table.add_row("Total New Jobs", str(stats["total_jobs_new"]))
-        
-        console.print(table)
-    
-    else:
-        console.print(f"[red]Unknown action: {action}[/red]")
-        console.print("Available: start, run, status")
-
-
 @app.command(name="job-stats")
 def job_stats():
     console.print("\n📊 [bold blue]Job Statistics[/bold blue]\n")
@@ -531,31 +475,6 @@ def job_stats():
                 source_table.add_row(source or "Unknown", str(count))
             
             console.print(source_table)
-
-
-@app.command()
-def resume(
-    variant: Optional[str] = typer.Option(None, "--variant", "-v", help="Resume variant from profile"),
-    job_description: Optional[str] = typer.Option(None, "--jd", help="Job description text"),
-    url: Optional[str] = typer.Option(None, "--url", "-u", help="Job URL to fetch description"),
-):
-    console.print(f"\n📄 [bold blue]Generating Resume...[/bold blue]\n")
-    
-    from src.resume.generator import ResumeGenerator
-    
-    try:
-        generator = ResumeGenerator()
-        
-        jd_text = job_description
-        # TODO: If URL provided, fetch content (omitted for now to keep simple)
-        
-        pdf_path = generator.generate(variant=variant, job_description=jd_text)
-        console.print(f"[green]✅ Resume generated: [bold]{pdf_path}[/bold][/green]")
-        
-    except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
-        if "pdflatex" in str(e):
-            console.print("[yellow]Tip: Install LaTeX with 'sudo apt install texlive-latex-base'[/yellow]")
 
 
 @app.command(name="h1b-sponsors")

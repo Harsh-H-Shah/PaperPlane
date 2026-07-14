@@ -6,7 +6,7 @@ import time
 from src.core.job import Job, JobSource, JobStatus
 from src.utils.config import get_settings
 from src.utils.database import get_db
-from src.scrapers.job_filter import JobFilter
+from src.scrapers.job_filter import JobFilter, is_software_role, is_senior_role
 from src.scrapers.scraper_utils import (
     ScrapeResult, RetryConfig, get_metrics, get_rate_limiter
 )
@@ -15,6 +15,9 @@ from src.scrapers.scraper_utils import (
 class BaseScraper(ABC):
     SOURCE_NAME = "Base"
     SOURCE_TYPE = JobSource.OTHER
+    # Optional per-scraper cap on how many jobs to pull per run. Used to keep slow
+    # scrapers (e.g. ones that resolve apply URLs one-by-one) from dominating runtime.
+    MAX_LIMIT: Optional[int] = None
     
     def __init__(self):
         self.settings = get_settings()
@@ -71,7 +74,13 @@ class BaseScraper(ABC):
     def should_include_job(self, job: Job) -> bool:
         title_lower = job.title.lower()
         company_lower = job.company.lower()
-        
+
+        # Hard gates: software-engineering roles only, and no senior/lead/staff+
+        # roles (the user is a junior / new grad) — regardless of source.
+        if not is_software_role(job.title) or is_senior_role(job.title):
+            self.jobs_filtered += 1
+            return False
+
         for excluded in self.settings.search.exclude_companies:
             if excluded.lower() in company_lower:
                 self.jobs_filtered += 1

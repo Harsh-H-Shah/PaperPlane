@@ -23,12 +23,6 @@ from src.fillers.universal_filler import UniversalFiller
 from src.fillers.redirect_filler import RedirectFiller
 from src.utils.logger import logger
 
-# Try to import AI Agent filler (free alternative to Stagehand)
-try:
-    from src.fillers.ai_agent_filler import AIAgentFiller
-    AI_AGENT_AVAILABLE = True
-except ImportError:
-    AI_AGENT_AVAILABLE = False
 
 class Orchestrator:
     def __init__(self, applicant: Applicant):
@@ -128,7 +122,7 @@ class Orchestrator:
     async def _scrape_jobs(self) -> None:
         logger.info("\n🔍 Scraping for new jobs...")
         try:
-            result = await self.aggregator.scrape_all(limit_per_source=max(100, self.settings.application.max_per_run * 2))
+            result = await self.aggregator.scrape_all(limit_per_source=max(800, self.settings.application.max_per_run * 2))
             stats = result["stats"]
             logger.info(f"  Found {stats['total_found']} jobs, {stats['total_new']} new")
         except Exception as e:
@@ -331,37 +325,11 @@ class Orchestrator:
             
             if not await filler.can_handle(page):
                 logger.warning(f"   ⚠️ {filler_class.__name__} can't handle this page")
-                
-                # Fallback to AI Agent filler (free alternative to Stagehand)
-                if AI_AGENT_AVAILABLE and self.llm_client:
-                    logger.info("   🤖 Falling back to AI Agent filler (free, works on any form)...")
-                    try:
-                        ai_filler = AIAgentFiller(applicant=self.applicant, llm_client=self.llm_client)
-                        success = await ai_filler.fill(page, job, application)
-                        screenshot_path = await self.browser_manager.take_screenshot(page, f"job_{job.id[:8]}_filled")
-                        application.screenshots.append(screenshot_path)
-                        self.db.update_application(application)
-                        return success
-                    except Exception as e:
-                        logger.error(f"   ❌ AI Agent filler also failed: {e}")
-                        return False
-                else:
-                    return False
-            
+                return False
+
             logger.info("   ✏️ Filling form...")
             success = await filler.fill(page, job, application)
-            
-            # If filler failed, try AI Agent as fallback
-            if not success and AI_AGENT_AVAILABLE and self.llm_client:
-                logger.info("   🤖 Primary filler failed, trying AI Agent filler as fallback...")
-                try:
-                    ai_filler = AIAgentFiller(applicant=self.applicant, llm_client=self.llm_client)
-                    success = await ai_filler.fill(page, job, application)
-                    if success:
-                        logger.info("   ✅ AI Agent filler succeeded!")
-                except Exception as e:
-                    logger.warning(f"   ⚠️ AI Agent fallback also failed: {e}")
-            
+
             screenshot_path = await self.browser_manager.take_screenshot(page, f"job_{job.id[:8]}_filled")
             application.screenshots.append(screenshot_path)
             
@@ -402,22 +370,12 @@ class Orchestrator:
 async def run_auto_apply(max_applications: int = 5, scrape_first: bool = True, dry_run: bool = False, filter_type: Optional[ApplicationType] = None) -> dict:
 
     
-    profile_path = Path("data/profile.json")
-    
-    # Try finding it in parent directories if not found in CWD
-    if not profile_path.exists():
-        # Check parent directories (up to 3 levels)
-        current = Path.cwd()
-        for _ in range(3):
-            candidate = current / "data/profile.json"
-            if candidate.exists():
-                profile_path = candidate
-                break
-            current = current.parent
+    from src.utils import paths
+    profile_path = paths.profile_path()
 
     if not profile_path.exists():
-        raise FileNotFoundError(f"Profile not found! CWD: {Path.cwd()}. Run 'python main.py init' and edit data/profile.json")
-    
+        raise FileNotFoundError(f"Profile not found at {profile_path}. Run 'python main.py init' and edit data/profile.json")
+
     applicant = Applicant.from_file(profile_path)
     logger.info(f"👤 Loaded profile: {applicant.full_name}")
     

@@ -11,10 +11,31 @@ from dataclasses import dataclass, field
 T = TypeVar('T')
 
 
+def parse_date_value(value) -> Optional[datetime]:
+    """Parse a date that may be a Unix timestamp (int/float/numeric str) or a
+    date string. Feeds like Simplify publish `date_posted` as an epoch
+    integer, which strptime cannot handle."""
+    if value is None or value == "":
+        return None
+
+    # Unix epoch seconds (int/float, or a purely-numeric string)
+    if isinstance(value, (int, float)) or (isinstance(value, str) and value.strip().isdigit()):
+        try:
+            ts = float(value)
+            # Treat obviously-millisecond timestamps accordingly
+            if ts > 1e12:
+                ts /= 1000.0
+            return datetime.fromtimestamp(ts)
+        except (ValueError, OverflowError, OSError):
+            return None
+
+    return parse_date_string(str(value))
+
+
 def parse_date_string(date_str: str) -> Optional[datetime]:
     if not date_str:
         return None
-    
+
     date_str = date_str.strip()
     
     # 1. Try generic ISO formats

@@ -8,7 +8,10 @@ from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
-load_dotenv()
+from src.utils import paths
+
+# Load environment variables from the repo-root .env regardless of cwd.
+load_dotenv(paths.env_file())
 
 
 class BrowserConfig(BaseModel):
@@ -52,7 +55,7 @@ class ScraperSourceConfig(BaseModel):
 class ScrapersConfig(BaseModel):
     jobright: ScraperSourceConfig = Field(default_factory=ScraperSourceConfig)
     simplify: ScraperSourceConfig = Field(default_factory=ScraperSourceConfig)
-    cvrve: ScraperSourceConfig = Field(default_factory=ScraperSourceConfig)
+    company_boards: ScraperSourceConfig = Field(default_factory=ScraperSourceConfig)
     career_sites: ScraperSourceConfig = Field(default_factory=ScraperSourceConfig)
 
 
@@ -87,11 +90,7 @@ class NotificationsConfig(BaseModel):
 
 
 def resolve_db_path() -> str:
-    # Check for Docker environment path first
-    if Path("/app/data").exists():
-        return "/app/data/applications.db"
-    # Fallback to local dev path
-    return str(Path(__file__).parents[3] / "data" / "applications.db")
+    return str(paths.db_path())
 
 
 class DatabaseConfig(BaseModel):
@@ -149,42 +148,34 @@ class Settings(BaseSettings):
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     
     class Config:
-        env_file = ".env"
+        env_file = str(paths.env_file())
         env_file_encoding = "utf-8"
         extra = "ignore"
     
     @classmethod
     def load(cls, config_path: Optional[str | Path] = None) -> "Settings":
-        if config_path is None:
-            # Try root config, then parent dirs (up to 3 levels)
-            config_path = Path("config/settings.yaml")
-            current = Path.cwd()
-            for _ in range(3):
-                candidate = current / "config/settings.yaml"
-                if candidate.exists():
-                    config_path = candidate
-                    break
-                current = current.parent
-        else:
-            config_path = Path(config_path)
-        
+        # Always resolve config from the repo root, never from cwd.
+        config_path = Path(config_path) if config_path else paths.settings_file()
+
         yaml_config = {}
         if config_path.exists():
             with open(config_path, 'r') as f:
                 yaml_config = yaml.safe_load(f) or {}
-                
-        return cls(**yaml_config)
-    
+
+        settings = cls(**yaml_config)
+        # A relative database path from settings.yaml (e.g. "data/applications.db")
+        # is anchored to the repo root so it doesn't depend on cwd.
+        settings.database.path = str(paths.resolve_under_root(settings.database.path))
+        return settings
+
     def get_profile_path(self) -> Path:
-        return Path("data/profile.json")
-    
+        return paths.profile_path()
+
     def get_resume_path(self) -> Path:
-        return Path("data/resume.pdf")
-    
+        return paths.resume_path()
+
     def ensure_directories(self) -> None:
-        directories = ["data", "data/screenshots", "logs", "config"]
-        for dir_path in directories:
-            Path(dir_path).mkdir(parents=True, exist_ok=True)
+        paths.ensure_directories()
 
 
 @lru_cache()

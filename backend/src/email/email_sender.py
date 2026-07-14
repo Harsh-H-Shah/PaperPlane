@@ -11,6 +11,7 @@ from email.utils import formataddr
 from src.core.cold_email_models import ColdEmail, Contact, EmailStatus
 from src.utils.database import get_db
 from src.utils.config import get_settings
+from src.utils.logger import logger
 
 
 class EmailSender:
@@ -33,7 +34,7 @@ class EmailSender:
         self.enabled = bool(self.smtp_user and self.smtp_password)
         
         if not self.enabled:
-            print("   ⚠️ EmailSender: SMTP not configured. Set SMTP_USER and SMTP_PASSWORD in .env")
+            logger.warning("   ⚠️ EmailSender: SMTP not configured. Set SMTP_USER and SMTP_PASSWORD in .env")
     
     async def send(
         self,
@@ -45,7 +46,7 @@ class EmailSender:
         Returns True if sent successfully.
         """
         if not self.enabled:
-            print("   ❌ EmailSender: SMTP not configured")
+            logger.error("   ❌ EmailSender: SMTP not configured")
             return False
         
         # Get contact if not provided
@@ -69,12 +70,12 @@ class EmailSender:
             # Update status
             self.db.update_cold_email_status(email.id, EmailStatus.SENT)
             
-            print(f"   ✉️ Sent email to {contact.email}")
+            logger.info(f"   ✉️ Sent email to {contact.email}")
             return True
             
         except Exception as e:
             error_msg = str(e)
-            print(f"   ❌ Failed to send to {contact.email}: {error_msg}")
+            logger.error(f"   ❌ Failed to send to {contact.email}: {error_msg}")
             self.db.update_cold_email_status(
                 email.id, 
                 EmailStatus.FAILED,
@@ -194,7 +195,7 @@ class EmailSender:
         if not pending:
             return {"total": 0, "sent": 0, "failed": 0}
         
-        print(f"   📬 Processing {len(pending)} pending emails...")
+        logger.info(f"   📬 Processing {len(pending)} pending emails...")
         
         return await self.send_batch(pending)
     
@@ -209,5 +210,5 @@ class EmailSender:
                 server.login(self.smtp_user, self.smtp_password)
                 return True
         except Exception as e:
-            print(f"   ❌ SMTP test failed: {e}")
+            logger.error(f"   ❌ SMTP test failed: {e}")
             return False

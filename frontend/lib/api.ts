@@ -152,6 +152,17 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
   return res.json();
 }
 
+// Build a `?a=1&b=2` query string, skipping empty/undefined values (matches the
+// previous per-call truthy checks, so e.g. page=0 is intentionally omitted).
+function buildQuery(params?: Record<string, string | number | undefined | null>): string {
+  const sp = new URLSearchParams();
+  for (const [key, value] of Object.entries(params ?? {})) {
+    if (value) sp.set(key, String(value));
+  }
+  const query = sp.toString();
+  return query ? `?${query}` : '';
+}
+
 export const api = {
   // ==================== Profile ====================
   getProfile: () => fetchApi<Profile>('/api/profile'),
@@ -180,16 +191,6 @@ export const api = {
     page?: number;
     per_page?: number;
   }) => {
-    const searchParams = new URLSearchParams();
-    if (params?.status) searchParams.set('status', params.status);
-    if (params?.source) searchParams.set('source', params.source);
-    if (params?.type) searchParams.set('type', params.type);
-    if (params?.search) searchParams.set('search', params.search);
-    if (params?.sort) searchParams.set('sort', params.sort);
-    if (params?.page) searchParams.set('page', params.page.toString());
-    if (params?.per_page) searchParams.set('per_page', params.per_page.toString());
-    
-    const query = searchParams.toString();
     return fetchApi<{
       total: number;
       page: number;
@@ -197,7 +198,7 @@ export const api = {
       total_pages: number;
       has_more: boolean;
       jobs: Job[];
-    }>(`/api/jobs${query ? `?${query}` : ''}`);
+    }>(`/api/jobs${buildQuery(params)}`);
   },
 
   createJob: (data: { 
@@ -263,14 +264,7 @@ export const api = {
 
   // ==================== Contacts ====================
   getContacts: (params?: { company?: string; search?: string; persona?: string; job_id?: string; limit?: number }) => {
-    const searchParams = new URLSearchParams();
-    if (params?.company) searchParams.set('company', params.company);
-    if (params?.search) searchParams.set('search', params.search);
-    if (params?.persona) searchParams.set('persona', params.persona);
-    if (params?.job_id) searchParams.set('job_id', params.job_id);
-    if (params?.limit) searchParams.set('limit', params.limit.toString());
-    const query = searchParams.toString();
-    return fetchApi<{ total: number; contacts: Contact[] }>(`/api/contacts${query ? `?${query}` : ''}`);
+    return fetchApi<{ total: number; contacts: Contact[] }>(`/api/contacts${buildQuery(params)}`);
   },
 
   createContact: (data: { name: string; email: string; title?: string; company: string; persona?: string; linkedin_url?: string; job_id?: string; notes?: string }) =>
@@ -291,26 +285,15 @@ export const api = {
     }),
 
   scrapeContacts: (params: { company?: string; job_id?: string; limit?: number }) => {
-    const searchParams = new URLSearchParams();
-    if (params.company) searchParams.set('company', params.company);
-    if (params.job_id) searchParams.set('job_id', params.job_id);
-    if (params.limit) searchParams.set('limit', params.limit.toString());
     return fetchApi<{ status: string; message: string }>(
-      `/api/contacts/scrape?${searchParams.toString()}`,
+      `/api/contacts/scrape${buildQuery(params)}`,
       { method: 'POST' }
     );
   },
 
   // ==================== Emails ====================
   getEmails: (params?: { status?: string; search?: string; job_id?: string; contact_id?: string; limit?: number }) => {
-    const searchParams = new URLSearchParams();
-    if (params?.status) searchParams.set('status', params.status);
-    if (params?.search) searchParams.set('search', params.search);
-    if (params?.job_id) searchParams.set('job_id', params.job_id);
-    if (params?.contact_id) searchParams.set('contact_id', params.contact_id);
-    if (params?.limit) searchParams.set('limit', params.limit.toString());
-    const query = searchParams.toString();
-    return fetchApi<{ total: number; emails: Email[] }>(`/api/emails${query ? `?${query}` : ''}`);
+    return fetchApi<{ total: number; emails: Email[] }>(`/api/emails${buildQuery(params)}`);
   },
 
   createEmail: (data: { contact_id: string; job_id?: string; template_id?: string; subject: string; body: string }) =>

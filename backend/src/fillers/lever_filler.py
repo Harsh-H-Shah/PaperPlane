@@ -3,6 +3,7 @@ from playwright.async_api import Page
 from src.core.application import Application
 from src.core.job import Job
 from src.fillers.base_filler import BaseFiller
+from src.utils.logger import logger
 
 
 
@@ -51,7 +52,7 @@ class LeverFiller(BaseFiller):
             for candidate in candidates:
                 if candidate.exists():
                     resume_path = str(candidate.resolve())
-                    print(f"   📁 Found resume at: {resume_path}")
+                    logger.info(f"   📁 Found resume at: {resume_path}")
                     break
             
             if resume_path:
@@ -60,11 +61,11 @@ class LeverFiller(BaseFiller):
                     await resume_input.set_input_files(resume_path)
                     application.resume_uploaded = True
                     application.add_log("uploaded_resume", "Resume uploaded")
-                    print("   ✅ Resume uploaded")
+                    logger.info("   ✅ Resume uploaded")
                 else:
-                    print("   ⚠️ No file input found for resume")
+                    logger.warning("   ⚠️ No file input found for resume")
             else:
-                print("   ❌ Resume file not found")
+                logger.error("   ❌ Resume file not found")
             
             await self._fill_urls(page)
             await self._handle_custom_questions(page, job, application)

@@ -40,13 +40,11 @@ backend/.venv/
 *.swo
 *~
 
-# Data files (sensitive)
+# Data files (sensitive) — all runtime data lives in the repo-root data/ dir
 data/profile.json
 data/*.db
 data/llm_usage.json
-backend/data/browser_context/
-backend/data/*.db
-backend/data/llm_usage.json
+data/browser_context/
 
 # Logs
 logs/
@@ -67,8 +65,8 @@ temp/
 
 # Debug outputs
 probe_output.txt
-backend/data/debug_*.html
-backend/data/*.corrupted
+data/debug_*.html
+data/*.corrupted
 backend/src/scripts/data/
 
 # Vercel

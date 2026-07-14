@@ -3,6 +3,7 @@ import httpx
 from typing import Optional
 from datetime import datetime
 from src.core.job import Job
+from src.utils.logger import logger
 
 
 class LinkValidator:
@@ -171,7 +172,7 @@ class LinkValidator:
             
         # Run Jobright tasks with fast HTTP resolution (no browser needed)
         if playwright_jobs:
-            print(f"[DEBUG] Processing {len(playwright_jobs)} Jobright jobs with HTTP resolution...")
+            logger.info(f"[DEBUG] Processing {len(playwright_jobs)} Jobright jobs with HTTP resolution...")
             
             async def resolve_jobright_http(job: Job) -> tuple[str, tuple]:
                 """Resolve Jobright links via HTTP - much faster than browser."""
@@ -190,7 +191,7 @@ class LinkValidator:
                         
                         # If we landed on a different domain, that's the apply URL
                         if "jobright.ai" not in final_url:
-                            print(f"[DEBUG] HTTP resolved: {url} -> {final_url}")
+                            logger.info(f"[DEBUG] HTTP resolved: {url} -> {final_url}")
                             return (job_key, (True, None, final_url))
                         
                         # Parse HTML to find the direct apply link
@@ -201,13 +202,13 @@ class LinkValidator:
                         apply_link_match = re.search(r'"applyLink"\s*:\s*"([^"]+)"', content)
                         if apply_link_match:
                             apply_url = apply_link_match.group(1).replace('\\/', '/')
-                            print(f"[DEBUG] Found applyLink: {apply_url}")
+                            logger.info(f"[DEBUG] Found applyLink: {apply_url}")
                             return (job_key, (True, None, apply_url))
                         
                         original_url_match = re.search(r'"originalUrl"\s*:\s*"([^"]+)"', content)
                         if original_url_match:
                             orig_url = original_url_match.group(1).replace('\\/', '/')
-                            print(f"[DEBUG] Found originalUrl: {orig_url}")
+                            logger.info(f"[DEBUG] Found originalUrl: {orig_url}")
                             return (job_key, (True, None, orig_url))
                         
                         # Look for external links that look like ATS systems
@@ -223,15 +224,15 @@ class LinkValidator:
                             match = re.search(pattern, content, re.IGNORECASE)
                             if match:
                                 ats_url = match.group(1)
-                                print(f"[DEBUG] Found ATS link: {ats_url}")
+                                logger.info(f"[DEBUG] Found ATS link: {ats_url}")
                                 return (job_key, (True, None, ats_url))
                         
                         # Couldn't find direct link - use original URL but mark job valid
-                        print(f"[DEBUG] No direct link found, using original: {url}")
+                        logger.info(f"[DEBUG] No direct link found, using original: {url}")
                         return (job_key, (True, None, url))
                         
                 except Exception as e:
-                    print(f"[DEBUG] HTTP resolution failed for {url}: {e}")
+                    logger.error(f"[DEBUG] HTTP resolution failed for {url}: {e}")
                     return (job_key, (True, None, url))  # Return original URL on error
             
             # Process in parallel batches

@@ -67,16 +67,22 @@ export default function MissionsPage() {
     };
   }, []);
 
+  // Build the job-query params from the current filters/search/sort.
+  const buildJobParams = (extra: Record<string, any> = {}) => {
+    const params: any = { ...extra };
+    if (filter !== 'all') params.status = filter;
+    if (sourceFilter !== 'all') params.source = sourceFilter;
+    if (typeFilter !== 'all') params.type = typeFilter;
+    if (debouncedSearch) params.search = debouncedSearch;
+    if (sortBy) params.sort = sortBy;
+    return params;
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const params: any = { per_page: 50, page: 1 };
-        if (filter !== 'all') params.status = filter;
-        if (sourceFilter !== 'all') params.source = sourceFilter;
-        if (typeFilter !== 'all') params.type = typeFilter;
-        if (debouncedSearch) params.search = debouncedSearch;
-        if (sortBy) params.sort = sortBy;
+        const params = buildJobParams({ per_page: 50, page: 1 });
 
         // Fetch jobs first for faster display, then profile/gamification
         const jobsData = await api.getJobs(params);
@@ -105,12 +111,7 @@ export default function MissionsPage() {
       setIsLoadMore(true);
       try {
           const nextPage = page + 1;
-          const params: any = { per_page: 50, page: nextPage };
-          if (filter !== 'all') params.status = filter;
-          if (sourceFilter !== 'all') params.source = sourceFilter;
-          if (typeFilter !== 'all') params.type = typeFilter;
-          if (debouncedSearch) params.search = debouncedSearch;
-          if (sortBy) params.sort = sortBy;
+          const params = buildJobParams({ per_page: 50, page: nextPage });
 
           const jobsData = await api.getJobs(params);
           setJobs(prev => [...prev, ...jobsData.jobs]);
@@ -135,17 +136,8 @@ export default function MissionsPage() {
   };
 
   const refresher = async () => {
-      // Refresh current view (stay on current page logic is complex, simpler to reload page 1 or just re-fetch current list? 
-      // For simplicity in this context, let's just re-fetch page 1 but ideally we should update the modified item locally)
-      // Actually, refresher is used after actions. Let's try to just update the specific item locally if possible?
-      // But status changes might move it around if "New" filter is active.
-      // Let's re-fetch page 1.
-      const params: any = { per_page: 50 * page, page: 1 }; // Fetch all loaded so far?
-      if (filter !== 'all') params.status = filter;
-      if (sourceFilter !== 'all') params.source = sourceFilter;
-      if (typeFilter !== 'all') params.type = typeFilter;
-      if (debouncedSearch) params.search = debouncedSearch;
-      if (sortBy) params.sort = sortBy;
+      // Re-fetch everything loaded so far (page 1 .. current page) in one call.
+      const params = buildJobParams({ per_page: 50 * page, page: 1 });
       const jobsData = await api.getJobs(params);
       setJobs(jobsData.jobs);
       setHasMore(jobsData.has_more);
@@ -218,13 +210,11 @@ export default function MissionsPage() {
   };
 
   const handleAbortJob = async (jobId: string) => {
-    console.log('Aborting job:', jobId);
     setAbortingJobs(prev => new Set(prev).add(jobId));
-    
+
     try {
-      const result = await api.abortApply(jobId);
-      console.log('Abort result:', result);
-      
+      await api.abortApply(jobId);
+
       // Clear polling if any
       if (pollingRef.current) {
         clearInterval(pollingRef.current);

@@ -3,6 +3,7 @@ import asyncio
 from src.core.application import Application
 from src.core.job import Job
 from src.fillers.base_filler import BaseFiller
+from src.utils.logger import logger
 
 
 class GreenhouseFiller(BaseFiller):
@@ -24,7 +25,7 @@ class GreenhouseFiller(BaseFiller):
     
     async def can_handle(self, page: Page) -> bool:
         url = page.url.lower()
-        print(f"DEBUG: GreenHouseFiller checking URL: {url}")
+        logger.info(f"DEBUG: GreenHouseFiller checking URL: {url}")
         if "greenhouse.io" in url:
             return True
         
@@ -64,15 +65,15 @@ class GreenhouseFiller(BaseFiller):
             await asyncio.sleep(1)
             
             if application.questions_for_review:
-                print(f"DEBUG: Review required for {len(application.questions_for_review)} items (PROCEEDING ANYWAY):")
+                logger.info(f"DEBUG: Review required for {len(application.questions_for_review)} items (PROCEEDING ANYWAY):")
                 for q, reason in application.questions_for_review.items():
-                    print(f"  - {q}: {reason}")
+                    logger.info(f"  - {q}: {reason}")
                 
                 # For demo purposes, we PROCEED even if review is needed
                 application.add_log("warning", "Proceeding with submission despite review items")
             
             # SUBMIT
-            print("   🚀 Submitting application...")
+            logger.info("   🚀 Submitting application...")
             success = await self.submit_application(frame)
             if success:
                  application.add_log("submitted", "Application submitted successfully")
@@ -82,7 +83,7 @@ class GreenhouseFiller(BaseFiller):
                  raise Exception("Submission failed (Timeout or Error)")
             
         except Exception as e:
-            print(f"DEBUG: Fill Exception: {e}")
+            logger.error(f"DEBUG: Fill Exception: {e}")
             import traceback
             traceback.print_exc()
             application.fail(str(e))
@@ -104,7 +105,7 @@ class GreenhouseFiller(BaseFiller):
                 # DEBUG: Screenshot before submit
                 try:
                     await page.screenshot(path="debug_before_submit.png")
-                    print("   📸 Created debug_before_submit.png")
+                    logger.info("   📸 Created debug_before_submit.png")
                 except Exception:
                     pass
                 
@@ -139,42 +140,42 @@ class GreenhouseFiller(BaseFiller):
                          single_input = await page.locator("input[id*='code'], input[name*='code']").count()
                          
                          if split_inputs > 0 or single_input > 0:
-                             print("   📧 Email Verification Required! Initiating MailHandler...")
+                             logger.info("   📧 Email Verification Required! Initiating MailHandler...")
                              
                              try:
                                  from src.utils.mail_handler import MailHandler
                                  mail = MailHandler()
                                  
-                                 print("   ⏳ Waiting for verification code to arrive (polling up to 90s)...")
+                                 logger.info("   ⏳ Waiting for verification code to arrive (polling up to 90s)...")
 
                                  
                                  code = None
                                  # Poll every 15 seconds for up to 6 attempts (90 seconds total)
                                  for attempt in range(6):
                                      await asyncio.sleep(15) 
-                                     print(f"      🔄 Checking inbox (Attempt {attempt+1}/6)...")
+                                     logger.info(f"      🔄 Checking inbox (Attempt {attempt+1}/6)...")
                                      
                                      try:
                                          code = mail.get_verification_code(subject_filter="Greenhouse")
                                          if code:
-                                             print(f"      ✅ Code received on attempt {attempt+1}: {code}")
+                                             logger.info(f"      ✅ Code received on attempt {attempt+1}: {code}")
                                              break
                                      except Exception as e:
-                                         print(f"      ⚠️ Polling error: {e}")
+                                         logger.error(f"      ⚠️ Polling error: {e}")
                                      
                                  if code:
                                      # Remove spaces/dashes just in case
                                      clean_code = code.replace("-", "").replace(" ", "").strip()
                                      
                                      if split_inputs > 0:
-                                         print(f"   🔢 Filling split inputs with code: {clean_code}")
+                                         logger.info(f"   🔢 Filling split inputs with code: {clean_code}")
                                          for i, char in enumerate(clean_code):
                                              if i >= split_inputs:
                                                  break
                                              await page.locator(f"#security-input-{i}").fill(char)
                                              await asyncio.sleep(0.1)
                                      else:
-                                         print(f"   🔢 Filling single input with code: {clean_code}")
+                                         logger.info(f"   🔢 Filling single input with code: {clean_code}")
                                          input_field = page.locator("input[id*='code'], input[name*='code']").first
                                          await input_field.fill(clean_code)
                                      
@@ -193,31 +194,31 @@ class GreenhouseFiller(BaseFiller):
                                      for v_sel in verify_selectors:
                                          btn = page.locator(v_sel).first
                                          if await btn.count() > 0 and await btn.is_visible():
-                                             print(f"   🖱️ Clicking Verify button: {v_sel}")
+                                             logger.info(f"   🖱️ Clicking Verify button: {v_sel}")
                                              await btn.click()
                                              clicked = True
                                              break
                                              
                                      if not clicked:
-                                          print("   ⚠️ specific verify button not found, trying Enter key...")
+                                          logger.warning("   ⚠️ specific verify button not found, trying Enter key...")
                                           await page.keyboard.press("Enter")
                                           
                                      await page.wait_for_timeout(5000)
                                      return True
                                  else:
-                                     print("   ❌ No code found in email (or credentials missing).")
+                                     logger.error("   ❌ No code found in email (or credentials missing).")
                                      return False
                              except Exception as e:
-                                 print(f"   ❌ MailHandler Failed: {e}")
+                                 logger.error(f"   ❌ MailHandler Failed: {e}")
                                  return False
 
                     # Check for errors
                     if "error" in content.lower() or "required" in content.lower():  
-                         print("   ⚠️ Submission errors detected on page")
+                         logger.warning("   ⚠️ Submission errors detected on page")
                          try:
                              await page.screenshot(path="debug_submit_error.png")
                          except Exception as e:
-                             print(f"   ❌ Screenshot error: {e}")
+                             logger.error(f"   ❌ Screenshot error: {e}")
                          
                          # SCAVENGE FOR ERRORS
                          error_selectors = [
@@ -249,16 +250,16 @@ class GreenhouseFiller(BaseFiller):
                                 pass
                         
                          if found_errors:
-                            print(f"   ❌ CAPTURED VALIDATION ERRORS: {found_errors}")
+                            logger.error(f"   ❌ CAPTURED VALIDATION ERRORS: {found_errors}")
                             try:
                                 content = await page.content()
                                 with open("greenhouse_validation_dump.html", "w") as f:
                                     f.write(content)
-                                print("   📄 Saved greenhouse_validation_dump.html")
+                                logger.info("   📄 Saved greenhouse_validation_dump.html")
                             except Exception:
                                 pass
                          else:
-                            print("   ❌ No specific error text found (Might be Top-Level Alert or Captcha).")
+                            logger.error("   ❌ No specific error text found (Might be Top-Level Alert or Captcha).")
 
                          return False
 
@@ -268,7 +269,7 @@ class GreenhouseFiller(BaseFiller):
                 await page.screenshot(path="debug_submit_unknown.png")
                 return True
             except Exception as e:
-                print(f"   ❌ Click error: {e}")
+                logger.error(f"   ❌ Click error: {e}")
                 return False
         return False
         
@@ -314,11 +315,11 @@ class GreenhouseFiller(BaseFiller):
         for candidate in candidates:
             if candidate.exists():
                 resume_path = str(candidate.resolve())
-                print(f"   📁 Found resume at: {resume_path}")
+                logger.info(f"   📁 Found resume at: {resume_path}")
                 break
         
         if not resume_path:
-            print(f"   ❌ Resume not found! Tried: {[str(c) for c in candidates]}")
+            logger.error(f"   ❌ Resume not found! Tried: {[str(c) for c in candidates]}")
             return False
         
         # Selectors to find file input
@@ -333,13 +334,13 @@ class GreenhouseFiller(BaseFiller):
                 el = page.locator(selector).first
                 if await el.count() > 0:
                     await el.set_input_files(resume_path)
-                    print(f"   ✅ Resume uploaded via selector: {selector}")
+                    logger.info(f"   ✅ Resume uploaded via selector: {selector}")
                     return True
             except Exception as e:
-                print(f"   ⚠️ Failed to upload with {selector}: {e}")
+                logger.error(f"   ⚠️ Failed to upload with {selector}: {e}")
                 continue
                 
-        print("   ❌ No file input found for resume upload")
+        logger.error("   ❌ No file input found for resume upload")
         return False
     
     async def _fill_online_presence(self, page) -> None:
@@ -357,7 +358,7 @@ class GreenhouseFiller(BaseFiller):
         # Broader selector to catch all fields with labels
         questions = page.locator("div.field, div.custom-question, .application-question, div:has(> label), div:has(> .label)")
         count = await questions.count()
-        print(f"DEBUG: Found {count} potential question blocks.")
+        logger.info(f"DEBUG: Found {count} potential question blocks.")
         
         for i in range(count):
             question_el = questions.nth(i)
@@ -376,11 +377,11 @@ class GreenhouseFiller(BaseFiller):
                 continue
             
             question_text = question_text.strip()
-            print(f"DEBUG: Processing question: '{question_text}'")
+            logger.info(f"DEBUG: Processing question: '{question_text}'")
             text_lower = question_text.lower()
             
             if any(skip in text_lower for skip in ["first name", "last name", "email", "phone", "resume", "attach", "enter manually", "apply with", "cloudflares candidate privacy policy", "legal name", "would you like to include"]):
-                print(f"DEBUG: Skipping '{question_text}' (matched skip list)")
+                logger.info(f"DEBUG: Skipping '{question_text}' (matched skip list)")
                 continue
             
             # Check for Location/City/School/Degree Autocomplete (Prioritize this over Dropdown)
@@ -429,7 +430,7 @@ class GreenhouseFiller(BaseFiller):
                  if is_dropdown:
                      continue # Handled above but maybe logic failed
                  
-                 print(f"      -> Review item added: {question_text} (Unknown field type)")
+                 logger.info(f"      -> Review item added: {question_text} (Unknown field type)")
                  application.questions_for_review[question_text] = "Unknown field type"
                  continue
             
@@ -438,7 +439,7 @@ class GreenhouseFiller(BaseFiller):
 
         # Final sweep for Disability if missed
         try:
-            print("DEBUG: Performing final sweep for Disability field...")
+            logger.info("DEBUG: Performing final sweep for Disability field...")
             # Check for standard select or React Select input
             disability_el = page.locator("select[id*='disability'], select[name*='disability'], #disability_status, [aria-labelledby*='disability_status-label']").first
             
@@ -448,15 +449,15 @@ class GreenhouseFiller(BaseFiller):
                  # checks value attrib or check if placeholder is visible?
                  # Actually, usually input value is empty until typed, but for dropdowns...
                  # We can just try to fill it regardless?
-                 print(f"   -> Found Disability element (ID: {await disability_el.get_attribute('id')}), attempting fill...")
+                 logger.info(f"   -> Found Disability element (ID: {await disability_el.get_attribute('id')}), attempting fill...")
                  await self._handle_dropdown(disability_el, "Disability Status")
         except Exception as e:
-            print(f"DEBUG: Disability sweep error: {e}")
+            logger.error(f"DEBUG: Disability sweep error: {e}")
             try:
                 content = await page.content()
                 with open("greenhouse_page_dump.html", "w") as f:
                     f.write(content)
-                print("   📄 Saved greenhouse_page_dump.html for inspection")
+                logger.info("   📄 Saved greenhouse_page_dump.html for inspection")
             except Exception:
                 pass
                 
@@ -467,7 +468,7 @@ class GreenhouseFiller(BaseFiller):
         if not value:
             return False
         
-        print(f"DEBUG: Handling Autocomplete for '{question}' with '{value}'")
+        logger.info(f"DEBUG: Handling Autocomplete for '{question}' with '{value}'")
         
         try:
             # HYBRID "SHOCK AND AWE" STRATEGY
@@ -485,7 +486,7 @@ class GreenhouseFiller(BaseFiller):
             for sel in [".ui-menu-item", ".select2-results__option", "li[role='option']", ".autocomplete-suggestion"]:
                  suggestions = field.page.locator(f"{sel}:visible")
                  if await suggestions.count() > 0:
-                      print(f"   -> Clicking visible suggestion: {sel}")
+                      logger.info(f"   -> Clicking visible suggestion: {sel}")
                       await suggestions.first.click()
                       suggestion_clicked = True
                       break
@@ -495,7 +496,7 @@ class GreenhouseFiller(BaseFiller):
             # 4. Force Keyboard Confirmation (Redundancy)
             # Even if we clicked, pressing Enter often commits the state
             if not suggestion_clicked:
-                 print("   -> No suggestion clicked, using Keyboard Fallback")
+                 logger.info("   -> No suggestion clicked, using Keyboard Fallback")
                  await field.press("ArrowDown")
                  await asyncio.sleep(0.5)
             
@@ -505,13 +506,13 @@ class GreenhouseFiller(BaseFiller):
             
             # 5. VERIFICATION & DEBUGGING
             current_val = await field.input_value()
-            print(f"   -> Final Field Value: '{current_val}'")
+            logger.info(f"   -> Final Field Value: '{current_val}'")
             
             # 5. NUCLEAR OPTION: JS Injection
             # The input logic is failing to sync state. 
             # We will manually set the value and dispatch events at the browser level.
             
-            print("   ☢️ Executing Nuclear Option: JS Value Injection...")
+            logger.info("   ☢️ Executing Nuclear Option: JS Value Injection...")
             
             success = await field.page.evaluate("""(data) => {
                 const input = document.querySelector(data.selector);
@@ -540,9 +541,9 @@ class GreenhouseFiller(BaseFiller):
             }""", {"selector": f"#{await field.get_attribute('id')}", "value": value})
             
             if success:
-                 print(f"   ✅ JS Injection executed for {value}")
+                 logger.info(f"   ✅ JS Injection executed for {value}")
             else:
-                 print("   ⚠️ JS Injection: Could not find element/selector.")
+                 logger.warning("   ⚠️ JS Injection: Could not find element/selector.")
 
             # 6. CLEANUP: Force close any open dropdowns
             try:
@@ -553,7 +554,7 @@ class GreenhouseFiller(BaseFiller):
             
             return True
         except Exception as e:
-            print(f"   ❌ Autocomplete Error: {e}")
+            logger.error(f"   ❌ Autocomplete Error: {e}")
             # Emergency Cleanup
             try:
                 await field.press("Escape")
@@ -604,7 +605,7 @@ class GreenhouseFiller(BaseFiller):
                         break
                 
                 if not all_options:
-                    print(f"   ⚠️ Could not find options for custom dropdown '{question}'")
+                    logger.warning(f"   ⚠️ Could not find options for custom dropdown '{question}'")
                     # Try closing it to not block view
                     await field.press("Escape")
                     return
@@ -612,7 +613,7 @@ class GreenhouseFiller(BaseFiller):
                 # 3. Select best option
                 best_option = await self.field_mapper.get_dropdown_value(all_options, question)
                 if best_option:
-                    print(f"   -> LLM Chose: {best_option} for '{question}'")
+                    logger.info(f"   -> LLM Chose: {best_option} for '{question}'")
                     # Click the specific option
                     # We need to find the element that matches the text
                     # Using text= exact match if possible, or contains
@@ -621,7 +622,7 @@ class GreenhouseFiller(BaseFiller):
                     await field.press("Escape")
 
             except Exception as e:
-                print(f"   ❌ Dropdown Error: {e}")
+                logger.error(f"   ❌ Dropdown Error: {e}")
     
     async def _handle_textarea(self, field, question: str, job: Job, application: Application) -> None:
         common_answer = self.applicant.get_answer(
@@ -667,7 +668,7 @@ class GreenhouseFiller(BaseFiller):
 
             await field.fill(str(value))
         except Exception as e:
-            print(f"   ⚠️ Error filling field '{question}': {e}")
+            logger.error(f"   ⚠️ Error filling field '{question}': {e}")
             return
         
         bool_answer = self.field_mapper.get_boolean_answer(question)

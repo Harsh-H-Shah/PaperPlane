@@ -19,7 +19,7 @@ class JobStatus(str, Enum):
 class JobSource(str, Enum):
     JOBRIGHT = "jobright"
     SIMPLIFY = "simplify"
-    CVRVE = "cvrve"
+    CVRVE = "cvrve"  # retired scraper; kept for legacy DB rows
     BUILTIN = "builtin"
     WEWORKREMOTELY = "weworkremotely"
     YC_JOBS = "yc_jobs"
@@ -31,9 +31,18 @@ class JobSource(str, Enum):
     # New scrapers
     LEVELSFYI = "levelsfyi"
     GOOGLE_JOBS = "google_jobs"
-    CAREERJET = "careerjet"
+    CAREERJET = "careerjet"  # retired scraper; kept for legacy DB rows
     GLASSDOOR = "glassdoor"
     GREENHOUSE_JOBS = "greenhouse_jobs"
+    COMPANY_BOARDS = "company_boards"
+    SPEEDYAPPLY = "speedyapply"
+    REMOTIVE = "remotive"
+    REMOTEOK = "remoteok"
+    JOBICY = "jobicy"
+    HIMALAYAS = "himalayas"
+    WORKINGNOMADS = "workingnomads"
+    FOURDAYWEEK = "fourdayweek"
+    USAJOBS = "usajobs"
 
 
 class ApplicationType(str, Enum):

@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from playwright.async_api import async_playwright, Browser, BrowserContext, Page, Playwright
 
 from src.utils.config import get_settings
+from src.utils import paths
 
 
 class BrowserManager:
@@ -19,7 +20,7 @@ class BrowserManager:
         self.playwright = await async_playwright().start()
         
         browser_config = self.settings.browser
-        user_data_dir = Path("data/browser_context")
+        user_data_dir = paths.browser_context_dir()
         user_data_dir.mkdir(parents=True, exist_ok=True)
         
         # In Playwright, launch_persistent_context handles both launch and context creation
@@ -93,7 +94,7 @@ class BrowserManager:
             self.playwright = None
     
     async def take_screenshot(self, page: Page, name: str) -> str:
-        screenshots_dir = Path(self.settings.application.screenshots_dir)
+        screenshots_dir = paths.resolve_under_root(self.settings.application.screenshots_dir)
         screenshots_dir.mkdir(parents=True, exist_ok=True)
         
         path = screenshots_dir / f"{name}.png"
