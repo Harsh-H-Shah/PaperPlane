@@ -73,8 +73,8 @@ search:
   # Companies to exclude
   exclude_companies: []
   
-  # Only apply to jobs posted within X days
-  max_days_old: 7
+  # Only apply to jobs posted within X days (higher = more coverage, incl. curated new-grad lists)
+  max_days_old: 30
 
 # Scraper sources configuration
 scrapers:

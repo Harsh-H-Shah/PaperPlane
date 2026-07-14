@@ -42,7 +42,7 @@ class JobAggregator:
         self.scrapers.append(SpeedyApplyScraper())
         self.scrapers.append(PublicBoardsScraper())
 
-    async def scrape_all(self, keywords: list[str] = None, location: str = None, limit_per_source: int = 100) -> dict:
+    async def scrape_all(self, keywords: list[str] = None, location: str = None, limit_per_source: int = 800) -> dict:
         keywords = keywords or self.settings.search.titles
         locations = self.settings.search.locations
         location = location or (locations[0] if locations else "")
@@ -57,7 +57,10 @@ class JobAggregator:
             "already_seen": 0,
         }
         
-        tasks = [scraper.scrape(keywords, location, limit_per_source) for scraper in self.scrapers]
+        tasks = [
+            scraper.scrape(keywords, location, min(limit_per_source, scraper.MAX_LIMIT or limit_per_source))
+            for scraper in self.scrapers
+        ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         for scraper, result in zip(self.scrapers, results):

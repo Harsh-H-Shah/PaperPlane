@@ -10,6 +10,7 @@ from typing import Optional
 
 from src.scrapers.base_scraper import BaseScraper
 from src.scrapers.scraper_utils import parse_date_string
+from src.scrapers.job_filter import is_software_role
 from src.core.job import Job, JobSource, ApplicationType
 from src.utils.logger import logger
 
@@ -43,7 +44,30 @@ class GreenhouseJobsScraper(BaseScraper):
     
     def __init__(self, board_tokens: list[str] = None):
         super().__init__()
-        self.board_tokens = board_tokens or GREENHOUSE_BOARDS
+        tokens = board_tokens or GREENHOUSE_BOARDS
+        # Avoid double-fetching boards already covered (with verified tokens) by
+        # CompanyBoards — keep the two sources complementary, not redundant.
+        covered = self._company_board_greenhouse_tokens()
+        self.board_tokens = [t for t in tokens if t.lower() not in covered]
+
+    @staticmethod
+    def _company_board_greenhouse_tokens() -> set:
+        """Tokens/companies already covered by CompanyBoards (any ATS). A company
+        that moved to Ashby/Workable would otherwise just 404 on Greenhouse."""
+        try:
+            import yaml
+            from src.utils import paths
+            with open(paths.config_dir() / "company_boards.yaml") as f:
+                data = yaml.safe_load(f) or {}
+            covered = set()
+            for e in data.get("companies", []):
+                if not e.get("enabled", True):
+                    continue
+                covered.add((e.get("token") or "").lower())
+                covered.add((e.get("company") or "").lower().replace(" ", ""))
+            return covered - {""}
+        except Exception:
+            return set()
     
     async def scrape(self, keywords: list[str] = None, location: str = None, limit: int = 50) -> list[Job]:
         jobs = []
@@ -101,11 +125,10 @@ class GreenhouseJobsScraper(BaseScraper):
                     job_list = data.get("jobs", [])
                     
                     for item in job_list:
-                        # Filter by keywords
-                        title = item.get("title", "").lower()
-                        if not any(kw.lower() in title for kw in keywords):
+                        # Software-only gate (broad recall, non-software excluded)
+                        if not is_software_role(item.get("title", "")):
                             continue
-                        
+
                         job = self._parse_job(item, board_token)
                         if job:
                             jobs.append(job)

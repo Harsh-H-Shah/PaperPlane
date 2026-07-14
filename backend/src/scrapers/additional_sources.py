@@ -18,7 +18,9 @@ warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 class BuiltInScraper(BaseScraper):
     SOURCE_NAME = "BuiltIn"
     SOURCE_TYPE = JobSource.BUILTIN
-    
+    # Resolves each apply URL individually (slow), so cap it to keep runtime sane.
+    MAX_LIMIT = 60
+
     # Targeting Entry Level Software Engineering in USA
     BASE_URL = "https://builtin.com/jobs/engineering/software-engineering/entry-level"
     INTERN_URL = "https://builtin.com/jobs/internships"

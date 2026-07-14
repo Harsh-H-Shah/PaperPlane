@@ -122,7 +122,7 @@ class Orchestrator:
     async def _scrape_jobs(self) -> None:
         logger.info("\n🔍 Scraping for new jobs...")
         try:
-            result = await self.aggregator.scrape_all(limit_per_source=max(100, self.settings.application.max_per_run * 2))
+            result = await self.aggregator.scrape_all(limit_per_source=max(800, self.settings.application.max_per_run * 2))
             stats = result["stats"]
             logger.info(f"  Found {stats['total_found']} jobs, {stats['total_new']} new")
         except Exception as e:
