@@ -17,14 +17,15 @@ async def get_scraper_status():
     settings = get_settings()
 
     # Mirrors the scrapers actually registered in JobAggregator._setup_scrapers.
-    # Simplify and CVRVE are gated by config flags; the rest are always on.
+    # Simplify and CompanyBoards are gated by config flags; the rest are always on.
     scrapers = [
         {"name": "Simplify", "enabled": settings.scrapers.simplify.enabled, "configured": True, "icon": "📦"},
-        {"name": "CVRVE", "enabled": settings.scrapers.cvrve.enabled, "configured": True, "icon": "🎯"},
+        {"name": "CompanyBoards", "enabled": settings.scrapers.company_boards.enabled, "configured": True, "icon": "🏢"},
         {"name": "Jobright", "enabled": True, "configured": True, "icon": "🚀"},
         {"name": "BuiltIn", "enabled": True, "configured": True, "icon": "🏗️"},
-        {"name": "Careerjet", "enabled": True, "configured": True, "icon": "🔎"},
         {"name": "GreenhouseJobs", "enabled": True, "configured": True, "icon": "🌱"},
+        {"name": "SpeedyApply", "enabled": True, "configured": True, "icon": "⚡"},
+        {"name": "PublicBoards", "enabled": True, "configured": True, "icon": "🌐"},
     ]
 
     return {"scrapers": scrapers}

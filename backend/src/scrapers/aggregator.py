@@ -3,13 +3,13 @@ import asyncio
 
 from src.scrapers.base_scraper import BaseScraper
 from src.scrapers.simplify import SimplifyScraper
-from src.scrapers.cvrve import CVRVEScraper
 from src.scrapers.jobright import JobrightScraper
 from src.scrapers.additional_sources import BuiltInScraper
 from src.scrapers.link_validator import get_link_validator, get_incremental_scraper
-# New scrapers
-from src.scrapers.careerjet import CareerjetScraper
 from src.scrapers.greenhouse_jobs import GreenhouseJobsScraper
+from src.scrapers.company_boards import CompanyBoardsScraper
+from src.scrapers.speedyapply import SpeedyApplyScraper
+from src.scrapers.public_boards import PublicBoardsScraper
 from src.core.job import Job
 from src.utils.config import get_settings
 from src.utils.database import get_db
@@ -32,17 +32,15 @@ class JobAggregator:
         
         if scraper_config.simplify.enabled:
             self.scrapers.append(SimplifyScraper())
-        
-        if scraper_config.cvrve.enabled:
-            self.scrapers.append(CVRVEScraper())
-        
-        
+
+        if scraper_config.company_boards.enabled:
+            self.scrapers.append(CompanyBoardsScraper())
+
         self.scrapers.append(JobrightScraper())
         self.scrapers.append(BuiltInScraper())
-
-        # New scrapers
-        self.scrapers.append(CareerjetScraper())
         self.scrapers.append(GreenhouseJobsScraper())
+        self.scrapers.append(SpeedyApplyScraper())
+        self.scrapers.append(PublicBoardsScraper())
 
     async def scrape_all(self, keywords: list[str] = None, location: str = None, limit_per_source: int = 100) -> dict:
         keywords = keywords or self.settings.search.titles
@@ -124,13 +122,17 @@ class JobAggregator:
         
         scraper_map = {
             "simplify": SimplifyScraper,
-            "cvrve": CVRVEScraper,
             "jobright": JobrightScraper,
             "builtin": BuiltInScraper,
-            # New scrapers
-            "careerjet": CareerjetScraper,
             "greenhouse": GreenhouseJobsScraper,
             "greenhousejobs": GreenhouseJobsScraper,
+            "company_boards": CompanyBoardsScraper,
+            "companyboards": CompanyBoardsScraper,
+            "companies": CompanyBoardsScraper,
+            "speedyapply": SpeedyApplyScraper,
+            "public_boards": PublicBoardsScraper,
+            "publicboards": PublicBoardsScraper,
+            "remote": PublicBoardsScraper,
         }
         
         scraper_class = scraper_map.get(source_lower)

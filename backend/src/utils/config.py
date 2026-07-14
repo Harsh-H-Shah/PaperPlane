@@ -55,7 +55,7 @@ class ScraperSourceConfig(BaseModel):
 class ScrapersConfig(BaseModel):
     jobright: ScraperSourceConfig = Field(default_factory=ScraperSourceConfig)
     simplify: ScraperSourceConfig = Field(default_factory=ScraperSourceConfig)
-    cvrve: ScraperSourceConfig = Field(default_factory=ScraperSourceConfig)
+    company_boards: ScraperSourceConfig = Field(default_factory=ScraperSourceConfig)
     career_sites: ScraperSourceConfig = Field(default_factory=ScraperSourceConfig)
 
 

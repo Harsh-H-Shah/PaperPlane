@@ -85,7 +85,7 @@ scrapers:
     enabled: true
   simplify:
     enabled: true
-  cvrve:
+  company_boards:
     enabled: true
   career_sites:
     enabled: true

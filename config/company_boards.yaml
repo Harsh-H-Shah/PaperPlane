@@ -1,0 +1,118 @@
+# =============================================================================
+# Top-company job boards
+# =============================================================================
+# Curated list of top companies to pull roles from, one entry per company.
+# Adding a company = adding one line here (no code change).
+#
+# Fields:
+#   company  - display name
+#   ats      - greenhouse | lever | ashby | smartrecruiters | workable | workday | custom
+#   token    - board slug used by that ATS's public API
+#   adapter  - (custom only) named adapter in company_boards.py (amazon, netflix)
+#   endpoint - (workday/custom) full API URL, kept for the future adapter
+#   enabled  - if false, the fetcher skips it (kept in the list for later)
+#
+# Verified live against each ATS API on 2026-07-01 by the `verify-company-boards`
+# workflow. Re-run that workflow periodically to catch ATS/token drift.
+# Disabled entries are on a bespoke, script-hostile career API that needs a custom
+# big-tech adapter (Microsoft/Google/Apple/Meta) — see docs/JOB_INGESTION_PLAN.md.
+# Greenhouse/Lever/Ashby/SmartRecruiters/Workable/Workday adapters are all live.
+# =============================================================================
+
+companies:
+
+    # --- Big Tech (10/18 live) ---
+    - { company: "Amazon", ats: custom, adapter: amazon, enabled: true }   # ~1938 live
+    - { company: "Netflix", ats: custom, adapter: netflix, enabled: true }   # ~237 live
+    - { company: "ServiceNow", ats: smartrecruiters, token: "servicenow", enabled: true }   # ~407 live
+    - { company: "Adobe", ats: workday, token: "adobe", endpoint: "https://adobe.wd5.myworkdayjobs.com/wday/cxs/adobe/external_experienced/jobs", enabled: true }   # Workday (live)
+    - { company: "Apple", ats: custom, enabled: false }   # not on a standard ATS / bespoke API — needs custom adapter
+    - { company: "Cisco", ats: custom, enabled: false }   # not on a standard ATS / bespoke API — needs custom adapter
+    - { company: "Dell", ats: unknown, enabled: false }   # not on a standard ATS / bespoke API — needs custom adapter
+    - { company: "Google", ats: custom, enabled: false }   # not on a standard ATS / bespoke API — needs custom adapter
+    - { company: "IBM", ats: custom, enabled: false }   # not on a standard ATS / bespoke API — needs custom adapter
+    - { company: "Intel", ats: workday, token: "intel", endpoint: "https://intel.wd1.myworkdayjobs.com/wday/cxs/intel/External/jobs", enabled: true }   # Workday (live)
+    - { company: "Meta", ats: custom, enabled: false }   # not on a standard ATS / bespoke API — needs custom adapter
+    - { company: "Microsoft", ats: custom, enabled: false }   # not on a standard ATS / bespoke API — needs custom adapter
+    - { company: "Nvidia", ats: workday, token: "nvidia", endpoint: "https://nvidia.wd5.myworkdayjobs.com/wday/cxs/nvidia/NVIDIAExternalCareerSite/jobs", enabled: true }   # Workday (live)
+    - { company: "Oracle", ats: custom, enabled: false }   # not on a standard ATS / bespoke API — needs custom adapter
+    - { company: "Qualcomm", ats: custom, token: "qualcomm.com", endpoint: "https://careers.qualcomm.com/api/apply/v2/jobs?domain=qualcomm.com&start=0&num=10", enabled: false }   # not on a standard ATS / bespoke API — needs custom adapter
+    - { company: "SAP", ats: custom, enabled: false }   # not on a standard ATS / bespoke API — needs custom adapter
+    - { company: "Salesforce", ats: workday, token: "salesforce", endpoint: "https://salesforce.wd12.myworkdayjobs.com/wday/cxs/salesforce/External_Career_Site/jobs", enabled: true }   # Workday (live)
+    - { company: "Tesla", ats: custom, enabled: false }   # not on a standard ATS / bespoke API — needs custom adapter
+
+    # --- Fintech (12/14 live) ---
+    - { company: "Affirm", ats: greenhouse, token: "affirm", enabled: true }   # ~172 live
+    - { company: "Block (Square)", ats: greenhouse, token: "block", enabled: true }   # ~206 live
+    - { company: "Brex", ats: greenhouse, token: "brex", enabled: true }   # ~252 live
+    - { company: "Chime", ats: greenhouse, token: "chime", enabled: true }   # ~64 live
+    - { company: "Coinbase", ats: greenhouse, token: "coinbase", enabled: true }   # ~129 live
+    - { company: "Nubank", ats: greenhouse, token: "nubank", enabled: true }   # ~101 live
+    - { company: "Plaid", ats: ashby, token: "plaid", enabled: true }   # ~111 live
+    - { company: "Ramp", ats: ashby, token: "ramp", enabled: true }   # ~126 live
+    - { company: "Robinhood", ats: greenhouse, token: "robinhood", enabled: true }   # ~132 live
+    - { company: "SoFi", ats: greenhouse, token: "sofi", enabled: true }   # ~93 live
+    - { company: "Stripe", ats: greenhouse, token: "stripe", enabled: true }   # ~490 live
+    - { company: "Visa", ats: smartrecruiters, token: "Visa", enabled: true }   # ~4 live
+    - { company: "Mastercard", ats: workday, token: "mastercard", endpoint: "https://mastercard.wd1.myworkdayjobs.com/wday/cxs/mastercard/CorporateCareers/jobs", enabled: true }   # Workday (live)
+    - { company: "PayPal", ats: workday, token: "paypal", endpoint: "https://paypal.wd1.myworkdayjobs.com/wday/cxs/paypal/jobs/jobs", enabled: true }   # Workday (live)
+
+    # --- AI labs (10/10 live) ---
+    - { company: "Anthropic", ats: greenhouse, token: "anthropic", enabled: true }   # ~389 live
+    - { company: "Cerebras", ats: ashby, token: "cerebras", enabled: true }   # ~95 live
+    - { company: "Cohere", ats: ashby, token: "cohere", enabled: true }   # ~133 live
+    - { company: "Databricks", ats: greenhouse, token: "databricks", enabled: true }   # ~786 live
+    - { company: "Hugging Face", ats: workable, token: "huggingface", enabled: true }   # ~7 live
+    - { company: "Mistral AI", ats: lever, token: "mistral", enabled: true }   # ~178 live
+    - { company: "OpenAI", ats: ashby, token: "openai", enabled: true }   # ~719 live
+    - { company: "Perplexity", ats: ashby, token: "perplexity", enabled: true }   # ~78 live
+    - { company: "Runway", ats: ashby, token: "runway", enabled: true }   # ~4 live
+    - { company: "Scale AI", ats: greenhouse, token: "scaleai", enabled: true }   # ~179 live
+
+    # --- Enterprise SaaS (15/18 live) ---
+    - { company: "Airtable", ats: greenhouse, token: "airtable", enabled: true }   # ~37 live
+    - { company: "Asana", ats: greenhouse, token: "asana", enabled: true }   # ~151 live
+    - { company: "Cloudflare", ats: greenhouse, token: "cloudflare", enabled: true }   # ~228 live
+    - { company: "Confluent", ats: ashby, token: "confluent", enabled: true }   # ~49 live
+    - { company: "Datadog", ats: greenhouse, token: "datadog", enabled: true }   # ~411 live
+    - { company: "Elastic", ats: greenhouse, token: "elastic", enabled: true }   # ~205 live
+    - { company: "Figma", ats: greenhouse, token: "figma", enabled: true }   # ~172 live
+    - { company: "GitLab", ats: greenhouse, token: "gitlab", enabled: true }   # ~141 live
+    - { company: "Gusto", ats: greenhouse, token: "gusto", enabled: true }   # ~78 live
+    - { company: "MongoDB", ats: greenhouse, token: "mongodb", enabled: true }   # ~401 live
+    - { company: "Notion", ats: ashby, token: "notion", enabled: true }   # ~151 live
+    - { company: "Okta", ats: greenhouse, token: "okta", enabled: true }   # ~373 live
+    - { company: "Samsara", ats: greenhouse, token: "samsara", enabled: true }   # ~329 live
+    - { company: "Snowflake", ats: ashby, token: "snowflake", enabled: true }   # ~421 live
+    - { company: "Twilio", ats: greenhouse, token: "twilio", enabled: true }   # ~152 live
+    - { company: "Atlassian", ats: custom, enabled: false }   # not on a standard ATS / bespoke API — needs custom adapter
+    - { company: "HashiCorp", ats: unknown, enabled: false }   # not on a standard ATS / bespoke API — needs custom adapter
+    - { company: "Zoom", ats: custom, enabled: false }   # not on a standard ATS / bespoke API — needs custom adapter
+
+    # --- Consumer / marketplace (9/12 live) ---
+    - { company: "Airbnb", ats: greenhouse, token: "airbnb", enabled: true }   # ~227 live
+    - { company: "Discord", ats: greenhouse, token: "discord", enabled: true }   # ~62 live
+    - { company: "DoorDash", ats: greenhouse, token: "doordashusa", enabled: true }   # ~441 live
+    - { company: "Instacart", ats: greenhouse, token: "instacart", enabled: true }   # ~157 live
+    - { company: "Lyft", ats: greenhouse, token: "lyft", enabled: true }   # ~151 live
+    - { company: "Pinterest", ats: greenhouse, token: "pinterest", enabled: true }   # ~187 live
+    - { company: "Reddit", ats: greenhouse, token: "reddit", enabled: true }   # ~183 live
+    - { company: "Roblox", ats: greenhouse, token: "roblox", enabled: true }   # ~233 live
+    - { company: "Spotify", ats: lever, token: "spotify", enabled: true }   # ~121 live
+    - { company: "Shopify", ats: custom, enabled: false }   # not on a standard ATS / bespoke API — needs custom adapter
+    - { company: "Snap", ats: workday, token: "snapchat/snap", endpoint: "https://snapchat.wd1.myworkdayjobs.com/wday/cxs/snapchat/snap/jobs", enabled: true }   # Workday (live)
+    - { company: "Uber", ats: custom, endpoint: "https://www.uber.com/api/loadSearchJobsResults?localeCode=en", enabled: false }   # custom platform, adapter TBD
+
+    # --- High-growth / unicorns (9/12 live) ---
+    - { company: "Anduril", ats: greenhouse, token: "andurilindustries", enabled: true }   # ~2151 live
+    - { company: "Coursera", ats: greenhouse, token: "coursera", enabled: true }   # ~7 live
+    - { company: "Dropbox", ats: greenhouse, token: "dropbox", enabled: true }   # ~55 live
+    - { company: "Palantir", ats: lever, token: "palantir", enabled: true }   # ~276 live
+    - { company: "SpaceX", ats: greenhouse, token: "spacex", enabled: true }   # ~1829 live
+    - { company: "Toast", ats: greenhouse, token: "toast", enabled: true }   # ~271 live
+    - { company: "Vanta", ats: ashby, token: "vanta", enabled: true }   # ~108 live
+    - { company: "Vercel", ats: greenhouse, token: "vercel", enabled: true }   # ~65 live
+    - { company: "Wiz", ats: greenhouse, token: "wizinc", enabled: true }   # ~162 live
+    - { company: "Deel", ats: ashby, token: "Deel", endpoint: "https://api.ashbyhq.com/posting-api/job-board/Deel", enabled: false }   # not on a standard ATS / bespoke API — needs custom adapter
+    - { company: "Retool", ats: custom, token: "retool", endpoint: "https://jobs.gem.com/api/public/graphql", enabled: false }   # custom platform, adapter TBD
+    - { company: "Rippling", ats: custom, enabled: false }   # not on a standard ATS / bespoke API — needs custom adapter
