@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="ppGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00D9FF"/>
+      <stop offset="100%" stop-color="#00E39A"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#ppGrad)"/>
+  <!-- Filled paper plane (two folds) -->
+  <path d="M50 15 L14 30 L27 34 L31 47 L37 36 L50 15 Z" fill="#0A1015"/>
+  <path d="M50 15 L27 34 L27 34 L31 47 Z" fill="#0A1015" opacity="0.55"/>
+  <path d="M50 15 L27 34 L37 36 Z" fill="#ffffff" opacity="0.14"/>
+</svg>
