@@ -2,7 +2,6 @@ import asyncio
 import random
 from datetime import datetime
 from typing import Optional
-from pathlib import Path
 
 from src.core.job import Job, JobStatus, ApplicationType, JobSource
 from src.core.applicant import Applicant
