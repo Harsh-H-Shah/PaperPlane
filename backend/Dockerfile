@@ -29,8 +29,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Playwright + Chromium
-RUN playwright install chromium && playwright install-deps chromium
+# Install Playwright + Chromium into a shared path. The default (~/.cache) would be
+# /root/.cache, which the non-root appuser can't read at runtime.
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN playwright install chromium && playwright install-deps chromium && chmod -R a+rX /ms-playwright
 
 # Copy source code
 COPY . .
