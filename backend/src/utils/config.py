@@ -61,7 +61,7 @@ class ScrapersConfig(BaseModel):
 
 class LLMConfig(BaseModel):
     provider: str = "gemini"
-    model: str = "gemini-2.0-flash"
+    model: str = "gemini-3.5-flash-lite"
     temperature: float = 0.7
     max_tokens: int = 500
     max_retries: int = 3

@@ -73,15 +73,14 @@ export function Settings() {
                 onChange={(e) => update('model', e.target.value)}
               />
               <datalist id="pp-models">
-                <option value="gemini-2.5-flash" />
-                <option value="gemini-2.5-flash-lite" />
-                <option value="gemini-2.5-pro" />
+                <option value="gemini-3.5-flash-lite" />
+                <option value="gemini-3.8-flash" />
+                <option value="gemini-flash-lite-latest" />
                 <option value="gemini-flash-latest" />
               </datalist>
               <div className="hint">
-                Recommended: <code>gemini-2.5-flash</code> (fast + cheap). Use{' '}
-                <code>gemini-2.5-flash-lite</code> for lowest cost, <code>gemini-2.5-pro</code> for
-                best quality.
+                Recommended: <code>gemini-3.5-flash-lite</code> (cheapest, has a free tier). Use{' '}
+                <code>gemini-3.8-flash</code> for better quality.
               </div>
             </label>
           </>
