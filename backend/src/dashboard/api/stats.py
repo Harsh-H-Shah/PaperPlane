@@ -3,6 +3,7 @@ activity log and LLM usage."""
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter
+from sqlalchemy import func
 
 from src.utils.database import get_db
 from src.utils.config import get_settings
@@ -158,17 +159,26 @@ async def get_combat_history():
         "needs_review": {"label": "INTEL REQUIRED", "xp": 0, "color": "orange"},
         "failed": {"label": "MISSION FAILED", "xp": 0, "color": "red"},
         "skipped": {"label": "ABORTED", "xp": 0, "color": "gray"},
+        "new": {"label": "TARGET ACQUIRED", "xp": 0, "color": "gray"},
     }
 
     with db.session() as session:
-        recent = session.query(JobModel).filter(
+        # Jobs with real activity come first, then the newest untouched targets
+        # fill the rest so the panel isn't empty right after a scrape.
+        activity = session.query(JobModel).filter(
             JobModel.status.in_([
                 JobStatus.APPLIED.value,
                 JobStatus.IN_PROGRESS.value,
                 JobStatus.NEEDS_REVIEW.value,
                 JobStatus.FAILED.value,
             ])
-        ).order_by(JobModel.discovered_at.desc()).limit(10).all()
+        ).order_by(func.coalesce(JobModel.applied_at, JobModel.discovered_at).desc()).limit(10).all()
+
+        new_targets = session.query(JobModel).filter(
+            JobModel.status == JobStatus.NEW.value
+        ).order_by(JobModel.discovered_at.desc()).limit(20 - len(activity)).all()
+
+        recent = activity + new_targets
 
         history = []
         for job in recent:
