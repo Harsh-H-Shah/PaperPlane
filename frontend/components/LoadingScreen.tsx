@@ -12,7 +12,8 @@ const TAGLINES = [
 
 export default function LoadingScreen({ onComplete }: { onComplete: () => void }) {
   const [progress, setProgress] = useState(0);
-  const [tagline] = useState(() => TAGLINES[Math.floor(Math.random() * TAGLINES.length)]);
+  // Server and first client render must match, so the random pick happens after mount.
+  const [tagline, setTagline] = useState(TAGLINES[0]);
 
   const stableOnComplete = useCallback(onComplete, [onComplete]);
 
@@ -21,8 +22,13 @@ export default function LoadingScreen({ onComplete }: { onComplete: () => void }
     const duration = 2400; // ms — fast but not jarring
     const start = performance.now();
     let raf: number;
+    let pickedTagline = false;
 
     const tick = (now: number) => {
+      if (!pickedTagline) {
+        pickedTagline = true;
+        setTagline(TAGLINES[Math.floor(Math.random() * TAGLINES.length)]);
+      }
       const elapsed = now - start;
       const pct = Math.min(100, (elapsed / duration) * 100);
       // Use easeOutQuart for smooth deceleration
