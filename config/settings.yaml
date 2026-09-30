@@ -106,7 +106,7 @@ llm:
   # Provider: gemini, openai, ollama
   provider: gemini
   # Model name
-  model: "gemini-2.0-flash"
+  model: "gemini-3.5-flash-lite"
   # Temperature for generation (0.0 - 1.0)
   temperature: 0.7
   # Maximum tokens for responses
