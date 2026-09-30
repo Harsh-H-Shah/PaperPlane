@@ -50,8 +50,8 @@ async def list_jobs(
     app_type: Optional[str] = Query(None, alias="type"),
     search: Optional[str] = None,
     sort: Optional[str] = "newest",
-    page: int = 1,
-    per_page: int = 50
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1)
 ):
     db = get_db()
     from src.utils.database import JobModel

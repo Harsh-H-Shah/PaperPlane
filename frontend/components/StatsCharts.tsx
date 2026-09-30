@@ -47,7 +47,7 @@ export default function StatsCharts({ bySource, applied, pending, failed, total,
           MISSION STATUS
         </h4>
         <div className="h-48">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 320, height: 200 }}>
             <PieChart>
               <Pie
                 data={statusData}
@@ -98,7 +98,7 @@ export default function StatsCharts({ bySource, applied, pending, failed, total,
           INTEL SOURCES
         </h4>
         <div className="h-48">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 320, height: 200 }}>
             <BarChart data={sourceData} layout="vertical" margin={{ left: 60 }}>
               <XAxis type="number" stroke="#8A8F98" fontSize={10} />
               <YAxis type="category" dataKey="name" stroke="#8A8F98" fontSize={10} width={60} />
@@ -129,7 +129,7 @@ export default function StatsCharts({ bySource, applied, pending, failed, total,
           WEEKLY ACTIVITY
         </h4>
         <div className="h-32">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 320, height: 200 }}>
             <AreaChart data={weeklyData}>
               <defs>
                 <linearGradient id="colorApps" x1="0" y1="0" x2="0" y2="1">

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Footer from '@/components/Footer';
 import { api, Profile, Gamification } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 
 interface Scraper {
   name: string;
@@ -14,6 +15,7 @@ interface Scraper {
 }
 
 export default function ArsenalPage() {
+  const { isAdmin } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [gamification, setGamification] = useState<Gamification | null>(null);
   const [scrapers, setScrapers] = useState<Scraper[]>([]);
@@ -101,8 +103,11 @@ export default function ArsenalPage() {
     <div className="flex min-h-screen bg-[var(--valo-darker)]">
       <Sidebar
         agentName={profile?.agent_name || 'AGENT'}
+        userName={profile?.full_name || profile?.first_name}
+        valorantAgent={profile?.valorant_agent || 'jett'}
         levelTitle={gamification?.level_title || 'RECRUIT'}
         level={gamification?.level || 1}
+        rankIcon={gamification?.rank_icon}
         onDeploy={() => handleScrape()}
         isDeploying={!!activeScraper}
       />
@@ -160,14 +165,14 @@ export default function ArsenalPage() {
               </div>
               <button
                 onClick={() => handleScrape()}
-                disabled={!!activeScraper}
+                disabled={!isAdmin || !!activeScraper}
                 className={`w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-display font-bold tracking-wider transition-all flex-shrink-0 ${
-                  activeScraper
+                  !isAdmin || activeScraper
                     ? 'bg-[var(--valo-gray-light)] text-[var(--valo-text-dim)] cursor-not-allowed'
                     : 'bg-[var(--valo-red)] text-white hover:opacity-80 glow-red'
                 }`}
               >
-                {activeScraper ? 'SCANNING...' : 'DEPLOY FULL SCAN'}
+                {!isAdmin ? '🔒 ADMIN ONLY' : activeScraper ? 'SCANNING...' : 'DEPLOY FULL SCAN'}
               </button>
             </div>
           </div>
@@ -202,14 +207,14 @@ export default function ArsenalPage() {
                 </div>
                 <button
                   onClick={() => handleScrape(scraper.name.toLowerCase())}
-                  disabled={!scraper.configured || !!activeScraper}
+                  disabled={!isAdmin || !scraper.configured || !!activeScraper}
                   className={`w-full py-3 rounded-lg font-semibold transition ${
-                    scraper.configured && !activeScraper
+                    isAdmin && scraper.configured && !activeScraper
                       ? 'bg-[var(--valo-cyan)] text-[var(--valo-dark)] hover:opacity-80'
                       : 'bg-[var(--valo-gray-light)] text-[var(--valo-text-dim)] cursor-not-allowed'
                   }`}
                 >
-                  {activeScraper === scraper.name.toLowerCase() ? 'SCANNING...' : 'DEPLOY SCAN'}
+                  {!isAdmin ? '🔒 ADMIN ONLY' : activeScraper === scraper.name.toLowerCase() ? 'SCANNING...' : 'DEPLOY SCAN'}
                 </button>
               </div>
             ))}
