@@ -109,14 +109,7 @@ Applying to entry-level tech jobs is a numbers game: the same name, email, links
 
 ```mermaid
 flowchart TB
-    subgraph Discover["🔭 Discover"]
-        direction LR
-        S1[Simplify]
-        S2[SpeedyApply]
-        S3[65+ company boards]
-        S4[Jobright / Built In]
-        S5[Public boards]
-    end
+    Discover["🔭 Discover<br/>Simplify · SpeedyApply · 65+ company boards<br/>Jobright · Built In · public boards"]
 
     Discover --> F{{"🧹 Filter: dedupe · dead links · seniority · recency"}}
     F --> DB[("🗄️ SQLite")]
