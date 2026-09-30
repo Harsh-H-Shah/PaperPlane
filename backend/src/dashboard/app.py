@@ -4,6 +4,7 @@ This module wires the app together; the actual endpoints live in domain routers
 under src/dashboard/api/. To add an endpoint, edit (or add) a router there and
 include it below — keep this file thin.
 """
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -24,10 +25,13 @@ from src.dashboard.api import (
 
 app = FastAPI(title="PaperPlane API", version="2.0.0")
 
-# CORS for Next.js frontend
+# CORS for Next.js frontend. CORS_ORIGINS (comma-separated) overrides the default.
+DEFAULT_CORS_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000,https://paperplane.harshsh.com"
+cors_origins = [o.strip() for o in os.environ.get("CORS_ORIGINS", DEFAULT_CORS_ORIGINS).split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "https://paperplane.harsh.software"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

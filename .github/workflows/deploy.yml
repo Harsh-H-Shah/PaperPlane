@@ -1,18 +1,25 @@
 name: Deploy PaperPlane
 
+# Backend: image built here, pushed to GHCR, pulled by the Google Cloud VM.
+# Frontend: static export published to GitHub Pages.
+#
+# Repository variables (Settings → Secrets and variables → Actions → Variables):
+#   API_URL  e.g. https://paperplane-api.harshsh.com   (enables the frontend deploy)
+#   VM_HOST  the VM's external IP                       (enables the backend deploy)
+#   VM_USER  your SSH username on the VM
+# Repository secret:
+#   SSH_PRIVATE_KEY  private key whose public half is on the VM
+
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-env:
-  DROPLET_USER: paperplane
-  DROPLET_HOST: ${{ secrets.DROPLET_IP }}
+concurrency:
+  group: deploy
+  cancel-in-progress: false
 
 jobs:
-  # ──────────────────────────────────────────
-  # Job 1: Test & Lint
-  # ──────────────────────────────────────────
   test:
     name: Test & Lint
     runs-on: ubuntu-latest
@@ -40,7 +47,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
@@ -57,69 +64,109 @@ jobs:
       - name: Build frontend
         run: |
           cd frontend
-          NEXT_PUBLIC_API_URL=https://api.paperplane.harsh.software npm run build
+          npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ vars.API_URL || 'http://localhost:8080' }}
 
-  # ──────────────────────────────────────────
-  # Job 2: Deploy Backend to DigitalOcean
-  # ──────────────────────────────────────────
-  deploy-backend:
-    name: Deploy Backend
+  build-backend:
+    name: Build backend image
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - uses: docker/login-action@v3
         with:
-          host: ${{ secrets.DROPLET_IP }}
-          username: ${{ env.DROPLET_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /home/paperplane/PaperPlane
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-            # Pull latest code
-            git pull origin main
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ghcr.io/harsh-h-shah/paperplane-backend:latest
+            ghcr.io/harsh-h-shah/paperplane-backend:${{ github.sha }}
 
-            # Ensure bind-mounted dirs are writable by container user (appuser, UID 1001)
-            mkdir -p data logs
-            chmod 777 data logs
-
-            # Rebuild and restart backend
-            docker compose up -d --build backend
-
-            # Verify health
-            sleep 10
-            curl -f http://localhost:8080/api/stats || echo "Health check failed"
-
-  # ──────────────────────────────────────────
-  # Job 3: Deploy Frontend to Vercel
-  # ──────────────────────────────────────────
-  deploy-frontend:
-    name: Deploy Frontend (Vercel)
-    needs: test
+  deploy-backend:
+    name: Deploy backend (Google Cloud VM)
+    needs: build-backend
+    if: vars.VM_HOST != ''
     runs-on: ubuntu-latest
+    permissions:
+      packages: read
+    steps:
+      - name: Pull and restart on the VM
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          host: ${{ vars.VM_HOST }}
+          username: ${{ vars.VM_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: GHCR_USER,GHCR_TOKEN
+          script: |
+            set -e
+            cd "$HOME/paperplane"
+            git pull --ff-only origin main
+
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            docker compose -f docker-compose.prod.yml pull
+            docker logout ghcr.io
+
+            docker compose -f docker-compose.prod.yml up -d
+            docker image prune -f
+
+            for i in $(seq 1 30); do
+              if curl -fsS http://127.0.0.1:8080/api/stats > /dev/null; then
+                echo "Backend healthy"
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "Backend did not become healthy"
+            docker compose -f docker-compose.prod.yml logs --tail 50 backend
+            exit 1
+
+  deploy-frontend:
+    name: Deploy frontend (GitHub Pages)
+    needs: test
+    if: vars.API_URL != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Vercel CLI
-        run: npm install -g vercel@latest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
-      - name: Pull Vercel Environment
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Build static site
+        run: |
+          cd frontend
+          npm ci
+          npm run build
         env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          NEXT_OUTPUT: export
+          NEXT_PUBLIC_API_URL: ${{ vars.API_URL }}
 
-      - name: Build with Vercel
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/out
 
-      - name: Deploy to Vercel
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
+      - id: deployment
+        uses: actions/deploy-pages@v4

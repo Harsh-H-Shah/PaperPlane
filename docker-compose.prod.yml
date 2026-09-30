@@ -1,0 +1,38 @@
+# Production stack for a single small VM (see HOSTING.md).
+# The backend image is built by GitHub Actions and pulled from GHCR, so the
+# 1 GB VM never has to compile anything. Caddy terminates HTTPS.
+#
+#   docker compose -f docker-compose.prod.yml up -d
+
+services:
+  backend:
+    image: ghcr.io/harsh-h-shah/paperplane-backend:latest
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config:/app/config:ro
+    env_file:
+      - .env
+    # Only reachable from the VM itself (health checks, cron); Caddy proxies it publicly.
+    ports:
+      - "127.0.0.1:8080:8080"
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - API_DOMAIN=${API_DOMAIN:-paperplane-api.harshsh.com}
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
