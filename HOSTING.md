@@ -1,17 +1,75 @@
 # Hosting PaperPlane
 
-| Part | Where | Address | Cost |
-| --- | --- | --- | --- |
-| Frontend | GitHub Pages (static export) | `https://paperplane.harshsh.com` | $0 |
-| Backend + SQLite | Google Cloud `e2-micro` VM (Always Free tier) | `https://paperplane-api.harshsh.com` | ~$3.65/mo (public IPv4 only) |
-| HTTPS for the API | Caddy on the VM (Let's Encrypt, auto-renewing) | — | $0 |
-| Deploys | GitHub Actions on every push to `main` | — | $0 |
+The frontend always lives on **GitHub Pages** at `https://paperplane.harshsh.com` ($0). The backend runs in one of two places, and the API address stays `https://paperplane-api.harshsh.com` either way:
 
-The backend image is built by GitHub Actions and pulled from GHCR, so the 1 GB VM never compiles anything. Runtime data (`data/`, `.env`) lives only on the VM and is never overwritten by deploys.
+| Backend option | Cost | Up when | Status |
+| --- | --- | --- | --- |
+| **A. Home server + Cloudflare Tunnel** | $0 | This computer is on and awake | **Current** |
+| B. Google Cloud `e2-micro` VM | ~$3.65/mo (public IPv4) | Always | For later |
+
+Runtime data (`data/`, `.env`) never leaves the machine running the backend and is never overwritten by deploys.
 
 ---
 
-## 1. Google Cloud VM (one time)
+## A. Home server + Cloudflare Tunnel (current)
+
+The backend runs in Docker on this computer. The tunnel container makes an **outbound** connection to Cloudflare, so there are no open ports or router changes, and Cloudflare provides HTTPS. Both containers restart on their own after a crash, a network drop or a reboot (Docker starts on boot).
+
+### A1. Create the tunnel (Cloudflare dashboard, one time)
+
+1. **Zero Trust → Networks → Tunnels → Create a tunnel →** type **Cloudflared**, name it `paperplane`.
+2. On the install screen, **skip the install commands**. Copy the **token** only: the long string after `--token`.
+3. **Public hostnames → Add a public hostname:**
+   - Subdomain `paperplane-api`, domain `harshsh.com`
+   - Service type **HTTP**, URL **`backend:8080`**
+   - Cloudflare creates the DNS record for you.
+
+### A2. Start it (on this computer)
+
+Add the token to `.env` (never commit it), then start:
+
+```bash
+echo 'TUNNEL_TOKEN=<paste token>' >> .env
+docker compose -f docker-compose.tunnel.yml up -d --build
+curl https://paperplane-api.harshsh.com/api/stats
+```
+
+After pulling new code, run the same `up -d --build` command to rebuild the backend.
+
+### A3. Frontend on GitHub Pages (one time)
+
+- **Cloudflare DNS:** `CNAME` `paperplane` → `harsh-h-shah.github.io`, **DNS only** (grey cloud).
+- **GitHub → Settings → Pages:** source **GitHub Actions**, custom domain `paperplane.harshsh.com`, then **Enforce HTTPS** once the certificate is ready.
+- **GitHub → Settings → Secrets and variables → Actions → Variables:** `API_URL` = `https://paperplane-api.harshsh.com`.
+- Leave `VM_HOST` unset, so the workflow deploys only the frontend.
+
+### A4. Daily jobs (optional)
+
+`crontab -e`, then add (adjust the path):
+
+```cron
+0 3 * * * cd $HOME/Desktop/Projects/PaperPlane && COMPOSE_FILE=docker-compose.tunnel.yml ./deploy/backup-db.sh >> logs/backup.log 2>&1
+0 9 * * * cd $HOME/Desktop/Projects/PaperPlane && docker compose -f docker-compose.tunnel.yml exec -T backend python main.py scrape --limit 50 >> logs/cron-scrape.log 2>&1
+```
+
+### Keep in mind
+
+- **Sleep = offline.** If the computer sleeps, the site shows no data until it wakes. On a laptop, disable suspend while plugged in (Settings → Power), or keep it on AC with the lid-close action set to "do nothing".
+- **Reconnection is automatic:** when the network comes back, `cloudflared` reconnects on its own. After a reboot, Docker restarts both containers.
+- **Outage alerts:** a free uptime monitor (e.g. UptimeRobot on `https://paperplane-api.harshsh.com/api/stats`) tells you when it's down.
+
+---
+
+## B. Google Cloud VM (for later)
+
+The backend image is built by GitHub Actions and pulled from GHCR, so the 1 GB VM never compiles anything. Setting the `VM_HOST` variable turns this path on.
+
+| Part | Where | Cost |
+| --- | --- | --- |
+| Backend + SQLite | Google Cloud `e2-micro` VM (Always Free tier) | ~$3.65/mo (public IPv4 only) |
+| HTTPS for the API | Caddy on the VM (Let's Encrypt, auto-renewing) | $0 |
+
+### 1. Google Cloud VM (one time)
 
 **Cost:** the VM, a 30 GB standard disk and 1 GB/month of outbound traffic are Always Free. The public IPv4 address is **not** in the free tier. Google charges $0.005/hour for an in-use IPv4 address (about $3.65/month), and the new-account trial credit covers it at first.
 
@@ -30,7 +88,7 @@ The *Create instance* page always shows **list prices** (about $7/month). It doe
 4. **VPC network → IP addresses:** find the VM's external IP and click **Promote to static**, so it survives a stop/start. It costs the same while attached. If you ever delete the VM, **release the static IP too**, because an unattached one is billed at twice the rate.
 5. After 1–2 days, open **Billing → Reports**, group by SKU, and confirm the only charge is the external IP address.
 
-## 2. Deploy key (on your laptop)
+### 2. Deploy key (on your laptop)
 
 ```bash
 ssh-keygen -t ed25519 -f ~/.ssh/paperplane_deploy -N "" -C "<vm-username>"
@@ -43,7 +101,7 @@ In **Compute Engine → your VM → Edit → SSH Keys**, add the `.pub` contents
 ssh -i ~/.ssh/paperplane_deploy <vm-username>@<VM_IP>
 ```
 
-## 3. Set up the VM
+### 3. Set up the VM
 
 On the VM:
 
@@ -77,7 +135,7 @@ chmod 666 data/*  # the container user must be able to write the DB
 
 The first start happens on the first deploy (step 5), because the VM needs the image from GHCR.
 
-## 4. DNS (Cloudflare, `harshsh.com`)
+### 4. DNS (Cloudflare, `harshsh.com`)
 
 | Type | Name | Target | Proxy |
 | --- | --- | --- | --- |
@@ -86,7 +144,7 @@ The first start happens on the first deploy (step 5), because the VM needs the i
 
 Keep both grey. Caddy and GitHub Pages each need direct traffic to issue their HTTPS certificates. The API uses a single-level subdomain (`paperplane-api`, not `api.paperplane`) so it stays compatible if you ever turn Cloudflare's proxy on.
 
-## 5. GitHub settings
+### 5. GitHub settings
 
 **Settings → Pages:**
 
@@ -117,7 +175,7 @@ Then open `https://paperplane.harshsh.com`.
 
 ---
 
-## What recovers on its own
+### What recovers on its own
 
 | Event | Automatic? |
 | --- | --- |
@@ -127,7 +185,7 @@ Then open `https://paperplane.harshsh.com`.
 | New code on `main` | ✅ GitHub Actions builds, pushes, pulls and health-checks |
 | Disk full, DB corrupted, Gemini quota used up | ❌ Needs you. A free uptime monitor (e.g. UptimeRobot on `/api/stats`) will tell you. |
 
-## Day-to-day
+### Day-to-day
 
 ```bash
 cd ~/paperplane

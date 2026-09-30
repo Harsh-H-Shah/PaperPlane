@@ -1,0 +1,30 @@
+# Run the backend on this machine and publish it through a Cloudflare Tunnel
+# (see HOSTING.md, "Home server"). No open ports, HTTPS handled by Cloudflare,
+# and both containers come back on their own after a crash or reboot.
+#
+#   docker compose -f docker-compose.tunnel.yml up -d --build
+
+services:
+  backend:
+    build: ./backend
+    image: paperplane-backend:local
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config:/app/config:ro
+    env_file:
+      - .env
+    # Local access only (dashboard on this machine, health checks, cron).
+    ports:
+      - "127.0.0.1:8080:8080"
+    restart: unless-stopped
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    environment:
+      # From Cloudflare: Zero Trust → Networks → Tunnels → your tunnel → token.
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN:?Set TUNNEL_TOKEN in .env}
+    depends_on:
+      - backend
+    restart: unless-stopped
