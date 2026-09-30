@@ -3,7 +3,7 @@
 | Part | Where | Address | Cost |
 | --- | --- | --- | --- |
 | Frontend | GitHub Pages (static export) | `https://paperplane.harshsh.com` | $0 |
-| Backend + SQLite | Google Cloud `e2-micro` VM, Always Free | `https://paperplane-api.harshsh.com` | $0 |
+| Backend + SQLite | Google Cloud `e2-micro` VM (Always Free tier) | `https://paperplane-api.harshsh.com` | ~$3.65/mo (public IPv4 only) |
 | HTTPS for the API | Caddy on the VM (Let's Encrypt, auto-renewing) | — | $0 |
 | Deploys | GitHub Actions on every push to `main` | — | $0 |
 
@@ -13,15 +13,22 @@ The backend image is built by GitHub Actions and pulled from GHCR, so the 1 GB V
 
 ## 1. Google Cloud VM (one time)
 
+**Cost:** the VM, a 30 GB standard disk and 1 GB/month of outbound traffic are Always Free. The public IPv4 address is **not** in the free tier. Google charges $0.005/hour for an in-use IPv4 address (about $3.65/month), and the new-account trial credit covers it at first.
+
+The *Create instance* page always shows **list prices** (about $7/month). It doesn't subtract the free tier, which appears as a credit on the bill. What matters is that the settings below match the free tier exactly.
+
 1. Sign up at [console.cloud.google.com](https://console.cloud.google.com) and create a project (e.g. `paperplane`). A billing account is required even for Always Free resources.
-2. **Billing → Budgets & alerts:** create a **$1** budget with email alerts. You'll hear about any charge immediately.
-3. **Compute Engine → VM instances → Create instance.** Every setting below matters for staying free:
+2. **Billing → Budgets & alerts:** create a **$5** budget with email alerts, so any unexpected charge beyond the IP address gets flagged.
+3. **Compute Engine → VM instances → Create instance.** Every setting below matters:
    - **Region:** `us-west1`, `us-central1` or `us-east1` (only these are free)
-   - **Machine type:** `e2-micro`
-   - **Boot disk:** Ubuntu 24.04 LTS (x86/64), **Standard persistent disk** (not "Balanced"), 30 GB
+   - **Machine type:** series E2, preset **`e2-micro`** (not a *custom* machine type)
+   - **Boot disk:** Ubuntu 24.04 LTS (x86/64), change the type from "Balanced" to **Standard persistent disk**, size **30 GB**. Balanced disks are not free.
+   - **Data protection / snapshot schedule:** choose **No backups**. Snapshots are billed; `deploy/backup-db.sh` backs up the DB instead.
+   - **Networking → network service tier:** keep **Premium** (the default). The free 1 GB of outbound traffic doesn't apply to Standard tier.
+   - **Observability / Ops Agent:** leave it off.
    - **Firewall:** tick *Allow HTTP traffic* and *Allow HTTPS traffic*
-4. **VPC network → IP addresses:** find the VM's external IP and click **Promote to static**, so it survives a stop/start.
-5. After 1–2 days, open **Billing → Reports** and confirm the charges are $0.
+4. **VPC network → IP addresses:** find the VM's external IP and click **Promote to static**, so it survives a stop/start. It costs the same while attached. If you ever delete the VM, **release the static IP too**, because an unattached one is billed at twice the rate.
+5. After 1–2 days, open **Billing → Reports**, group by SKU, and confirm the only charge is the external IP address.
 
 ## 2. Deploy key (on your laptop)
 
