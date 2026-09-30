@@ -10,7 +10,7 @@ PaperPlane finds new tech roles every day, fills the application forms for you, 
 <br>
 
 [![Live demo](https://img.shields.io/badge/live%20demo-paperplane.harshsh.com-FF4655?style=for-the-badge&logo=googlechrome&logoColor=white)](https://paperplane.harshsh.com)
-[![Deploy](https://img.shields.io/github/actions/workflow/status/Harsh-H-Shah/PaperPlane/deploy.yml?branch=main&style=for-the-badge&label=deploy&logo=githubactions&logoColor=white)](https://github.com/Harsh-H-Shah/PaperPlane/actions/workflows/deploy.yml)
+[![Deploy](https://github.com/Harsh-H-Shah/PaperPlane/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/Harsh-H-Shah/PaperPlane/actions/workflows/deploy.yml)
 [![Stars](https://img.shields.io/github/stars/Harsh-H-Shah/PaperPlane?style=for-the-badge&color=00D9FF&logo=github)](https://github.com/Harsh-H-Shah/PaperPlane/stargazers)
 
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
@@ -108,8 +108,9 @@ Applying to entry-level tech jobs is a numbers game: the same name, email, links
 ## 🧭 How it works
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph Discover["🔭 Discover"]
+        direction LR
         S1[Simplify]
         S2[SpeedyApply]
         S3[65+ company boards]
@@ -117,16 +118,17 @@ flowchart LR
         S5[Public boards]
     end
 
-    Discover --> F{{"🧹 Filter<br/>dedupe · dead links<br/>seniority · recency"}}
+    Discover --> F{{"🧹 Filter: dedupe · dead links · seniority · recency"}}
     F --> DB[("🗄️ SQLite")]
     DB --> O["🎯 Orchestrator"]
     O --> C{"🔍 Detect ATS"}
-    C -->|Greenhouse / Lever<br/>Ashby / Workday| DF["⚙️ Dedicated filler"]
+    C -->|Greenhouse · Lever · Ashby · Workday| DF["⚙️ Dedicated filler"]
     C -->|anything else| UF["🧩 Universal filler"]
-    DF & UF --> M["📋 Map fields<br/>from your profile"]
+    DF --> M["📋 Map fields from your profile"]
+    UF --> M
     M -->|open-ended question| LLM["🧠 Gemini"]
     M -->|salary · visa · sponsorship| H["🙋 You review"]
-    LLM --> R["✅ Applied / 👀 needs review"]
+    LLM --> R["✅ Applied  /  👀 Needs review"]
     H --> R
     R --> G["🎮 XP · streaks · rank"]
 ```
@@ -211,15 +213,15 @@ The live demo at **[paperplane.harshsh.com](https://paperplane.harshsh.com)** ru
 
 ```mermaid
 flowchart LR
-    U(("👤 You")) -->|HTTPS| P["📄 GitHub Pages<br/>static frontend"]
+    GH["🤖 GitHub Actions"] -->|on push to main| P["📄 GitHub Pages<br/>static frontend"]
+    U(("👤 You")) -->|HTTPS| P
     U -->|HTTPS API| CF["☁️ Cloudflare"]
     CF <-->|outbound tunnel| T["🔌 cloudflared"]
     subgraph Home["🏠 Your computer (Docker)"]
         T --> B["⚡ FastAPI backend<br/>+ Playwright"]
         B --> D[("🗄️ SQLite")]
     end
-    B -->|free tier| G["🧠 Gemini"]
-    GH["🤖 GitHub Actions"] -->|on push to main| P
+    G["🧠 Gemini<br/>free tier"] <--> B
 ```
 
 | Piece | Service | Cost |
