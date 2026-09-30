@@ -42,7 +42,7 @@ jobs:
       - name: Lint backend
         run: |
           cd backend
-          pip install ruff
+          pip install ruff==0.16.9
           ruff check src/
 
       - name: Set up Node.js
