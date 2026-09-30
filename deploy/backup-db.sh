@@ -6,7 +6,10 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-docker compose -f docker-compose.prod.yml exec -T backend python - <<'EOF'
+# docker compose reads COMPOSE_FILE; defaults to the VM setup.
+export COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
+
+docker compose exec -T backend python - <<'EOF'
 import sqlite3
 from datetime import date
 from pathlib import Path
