@@ -21,6 +21,7 @@ PaperPlane finds new tech roles every day, fills the application forms for you, 
 ![Gemini](https://img.shields.io/badge/Gemini-3.5%20Flash--Lite-8E75B2?logo=googlegemini&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+[![License: MIT](https://img.shields.io/github/license/Harsh-H-Shah/PaperPlane?color=FFE500)](LICENSE)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-00FFA3)](#-contributing)
 
 [**Live demo**](https://paperplane.harshsh.com) · [**Quick start**](#-quick-start) · [**How it works**](#-how-it-works) · [**Run it for $0**](#-run-it-for-0) · [**Roadmap**](#%EF%B8%8F-roadmap)
@@ -264,7 +265,7 @@ If PaperPlane saves you some typing, a ⭐ helps other job seekers find it.
 
 ## 📜 License & disclaimer
 
-MIT License. Feel free to use and modify.
+[MIT License](LICENSE). Feel free to use and modify.
 
 PaperPlane is a personal productivity tool. Review what it fills in before anything is submitted, and follow each job platform's terms of service.
 
