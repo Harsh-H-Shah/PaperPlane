@@ -1,357 +1,142 @@
-# PaperPlane Hosting Guide ✈️
+# Hosting PaperPlane
 
-Step-by-step guide to deploy PaperPlane at `paperplane.harsh.software` with CI/CD.
+| Part | Where | Address | Cost |
+| --- | --- | --- | --- |
+| Frontend | GitHub Pages (static export) | `https://paperplane.harshsh.com` | $0 |
+| Backend + SQLite | Google Cloud `e2-micro` VM, Always Free | `https://paperplane-api.harshsh.com` | $0 |
+| HTTPS for the API | Caddy on the VM (Let's Encrypt, auto-renewing) | — | $0 |
+| Deploys | GitHub Actions on every push to `main` | — | $0 |
 
-## Architecture Overview
-
-| Component | Platform | Cost | Subdomain |
-|-----------|----------|------|-----------|
-| Frontend | Vercel (free) | $0/mo | `paperplane.harsh.software` |
-| Backend + DB | DigitalOcean Droplet | $6/mo | `api.paperplane.harsh.software` |
-| CI/CD | GitHub Actions (free) | $0/mo | — |
-
-> **Why this split?** The backend needs Playwright + Chromium (headless browser for scraping/filling), which requires a real Linux server with ~1GB RAM. Vercel is free and has native Next.js support with CDN + auto-SSL.
-
-**Estimated monthly cost:** ~$6/mo from your $200 DigitalOcean credit (lasts ~33 months)
+The backend image is built by GitHub Actions and pulled from GHCR, so the 1 GB VM never compiles anything. Runtime data (`data/`, `.env`) lives only on the VM and is never overwritten by deploys.
 
 ---
 
-## Step 1: Create DigitalOcean Droplet
+## 1. Google Cloud VM (one time)
 
-1. Go to [cloud.digitalocean.com](https://cloud.digitalocean.com)
-2. **Create Droplet:**
-   - **Image:** Ubuntu 24.04 LTS
-   - **Plan:** Basic → Regular (SSD) → **$6/mo** (1 vCPU, 1GB RAM, 25GB SSD)
-   - **Region:** Choose closest to you (e.g., NYC1)
-   - **Authentication:** SSH Key (recommended) or Password
-   - **Hostname:** `paperplane`
-3. Note the Droplet's **IP address** (e.g., `164.90.xxx.xxx`)
+1. Sign up at [console.cloud.google.com](https://console.cloud.google.com) and create a project (e.g. `paperplane`). A billing account is required even for Always Free resources.
+2. **Billing → Budgets & alerts:** create a **$1** budget with email alerts. You'll hear about any charge immediately.
+3. **Compute Engine → VM instances → Create instance.** Every setting below matters for staying free:
+   - **Region:** `us-west1`, `us-central1` or `us-east1` (only these are free)
+   - **Machine type:** `e2-micro`
+   - **Boot disk:** Ubuntu 24.04 LTS (x86/64), **Standard persistent disk** (not "Balanced"), 30 GB
+   - **Firewall:** tick *Allow HTTP traffic* and *Allow HTTPS traffic*
+4. **VPC network → IP addresses:** find the VM's external IP and click **Promote to static**, so it survives a stop/start.
+5. After 1–2 days, open **Billing → Reports** and confirm the charges are $0.
+
+## 2. Deploy key (on your laptop)
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/paperplane_deploy -N "" -C "<vm-username>"
+cat ~/.ssh/paperplane_deploy.pub
+```
+
+In **Compute Engine → your VM → Edit → SSH Keys**, add the `.pub` contents. The username in the comment becomes your VM login.
+
+```bash
+ssh -i ~/.ssh/paperplane_deploy <vm-username>@<VM_IP>
+```
+
+## 3. Set up the VM
+
+On the VM:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Harsh-H-Shah/PaperPlane/main/deploy/gcp-setup.sh | bash
+exit   # log back in so docker works without sudo
+```
+
+The script is safe to re-run. It:
+
+- adds 2 GB of swap;
+- installs Docker (starts on boot);
+- clones the repo to `~/paperplane`;
+- creates `.env` from the template;
+- installs two daily cron jobs: a DB backup at 07:00 UTC and a scrape at 13:00 UTC.
+
+From your laptop, copy your data up:
+
+```bash
+scp -i ~/.ssh/paperplane_deploy data/applications.db data/profile.json <vm-username>@<VM_IP>:~/paperplane/data/
+scp -i ~/.ssh/paperplane_deploy data/Harsh_Shah.pdf <vm-username>@<VM_IP>:~/paperplane/data/resume.pdf
+```
+
+Back on the VM, fill in secrets, then start:
+
+```bash
+cd ~/paperplane
+nano .env        # GEMINI_API_KEY, ADMIN_TOKEN (long random string: openssl rand -hex 32)
+chmod 666 data/*  # the container user must be able to write the DB
+```
+
+The first start happens on the first deploy (step 5), because the VM needs the image from GHCR.
+
+## 4. DNS (Cloudflare, `harshsh.com`)
+
+| Type | Name | Target | Proxy |
+| --- | --- | --- | --- |
+| `A` | `paperplane-api` | `<VM_IP>` | **DNS only** (grey cloud) |
+| `CNAME` | `paperplane` | `harsh-h-shah.github.io` | **DNS only** (grey cloud) |
+
+Keep both grey. Caddy and GitHub Pages each need direct traffic to issue their HTTPS certificates. The API uses a single-level subdomain (`paperplane-api`, not `api.paperplane`) so it stays compatible if you ever turn Cloudflare's proxy on.
+
+## 5. GitHub settings
+
+**Settings → Pages:**
+
+- Source: **GitHub Actions**
+- Custom domain: `paperplane.harshsh.com`
+- Tick **Enforce HTTPS** once the certificate is ready
+
+**Settings → Secrets and variables → Actions:**
+
+| Kind | Name | Value |
+| --- | --- | --- |
+| Variable | `API_URL` | `https://paperplane-api.harshsh.com` |
+| Variable | `VM_HOST` | the VM's static IP |
+| Variable | `VM_USER` | your VM username |
+| Secret | `SSH_PRIVATE_KEY` | contents of `~/.ssh/paperplane_deploy` |
+
+Delete the old `DROPLET_IP`, `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` secrets.
+
+Then run **Actions → Deploy PaperPlane → Run workflow** (or push to `main`). Each deploy job only runs when its variable is set: `API_URL` enables the frontend, and `VM_HOST` enables the backend.
+
+Check it:
+
+```bash
+curl https://paperplane-api.harshsh.com/api/stats
+```
+
+Then open `https://paperplane.harshsh.com`.
 
 ---
 
-## Step 2: DNS Setup on name.com
+## What recovers on its own
 
-Go to [name.com](https://www.name.com) → **My Domains** → `harsh.software` → **DNS Records**
+| Event | Automatic? |
+| --- | --- |
+| Backend crashes | ✅ Docker restarts it (`restart: unless-stopped`) |
+| VM reboots (Google maintenance) | ✅ Docker starts on boot and brings both containers back |
+| HTTPS certificates | ✅ Caddy (API) and GitHub Pages (frontend) renew them |
+| New code on `main` | ✅ GitHub Actions builds, pushes, pulls and health-checks |
+| Disk full, DB corrupted, Gemini quota used up | ❌ Needs you. A free uptime monitor (e.g. UptimeRobot on `/api/stats`) will tell you. |
 
-Add these records:
-
-| Type | Host | Value | TTL |
-|------|------|-------|-----|
-| `A` | `api.paperplane` | `YOUR_DROPLET_IP` | 300 |
-| `CNAME` | `paperplane` | `cname.vercel-dns.com` | 300 |
-
-> It takes 5-30 minutes for DNS to propagate. Check with: `dig api.paperplane.harsh.software`
-
----
-
-## Step 3: Set Up the Droplet
-
-SSH into your Droplet:
+## Day-to-day
 
 ```bash
-ssh root@YOUR_DROPLET_IP
+cd ~/paperplane
+docker compose -f docker-compose.prod.yml logs -f backend   # logs
+docker compose -f docker-compose.prod.yml restart backend    # restart
+ls data/backups/                                             # last 14 nightly DB backups
+tail logs/cron-scrape.log                                    # daily scrape output
 ```
 
-### 3.1 Initial Server Setup
+**Restore a backup:** stop the backend, copy `data/backups/applications-YYYY-MM-DD.db` over `data/applications.db`, then start it again.
 
-```bash
-# Update system
-apt update && apt upgrade -y
+**Limits to keep in mind:**
 
-# Create app user
-adduser paperplane
-usermod -aG sudo paperplane
+- **1 GB RAM:** one browser session at a time, and the swap file absorbs spikes.
+- **1 GB/month outbound traffic:** fine for dashboard traffic. Scraping is mostly inbound, which is free.
 
-# Install Docker
-curl -fsSL https://get.docker.com | sh
-usermod -aG docker paperplane
+## Local development
 
-# Install Docker Compose plugin
-apt install -y docker-compose-plugin
-
-# Install Nginx (reverse proxy)
-apt install -y nginx
-
-# Install Certbot (SSL certificates)
-apt install -y certbot python3-certbot-nginx
-
-# Switch to app user
-su - paperplane
-```
-
-### 3.2 Clone and Configure the Project
-
-```bash
-# Clone your repo
-git clone https://github.com/Harsh-H-Shah/PaperPlane.git
-cd PaperPlane
-
-# Create production .env
-cp .env.example .env
-nano .env
-```
-
-Edit `.env` with your production values:
-
-```ini
-# PaperPlane Environment Configuration
-GEMINI_API_KEY=your_actual_key
-DISCORD_WEBHOOK_URL=your_webhook
-HEADLESS=true
-AUTO_SUBMIT=false
-MAX_APPLICATIONS_PER_RUN=10
-```
-
-### 3.3 Start the Backend
-
-```bash
-# Build and start (only the backend — frontend goes to Vercel)
-docker compose up -d backend
-
-# Verify it's running
-docker compose logs -f backend
-# Should see: "🚀 Starting PaperPlane API at http://0.0.0.0:8080"
-
-# Test the API
-curl http://localhost:8080/api/stats
-```
-
-### 3.4 Configure Nginx Reverse Proxy
-
-```bash
-# As root user
-sudo nano /etc/nginx/sites-available/paperplane-api
-```
-
-Paste this config:
-
-```nginx
-server {
-    server_name api.paperplane.harsh.software;
-
-    location / {
-        proxy_pass http://127.0.0.1:8080;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-
-        # Longer timeouts for scraping operations
-        proxy_read_timeout 300s;
-        proxy_connect_timeout 75s;
-    }
-}
-```
-
-Enable and activate:
-
-```bash
-sudo ln -s /etc/nginx/sites-available/paperplane-api /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-### 3.5 SSL Certificate (HTTPS)
-
-```bash
-sudo certbot --nginx -d api.paperplane.harsh.software
-# Follow the prompts. Choose to redirect HTTP → HTTPS.
-
-# Auto-renewal is set up automatically. Verify:
-sudo certbot renew --dry-run
-```
-
-### 3.6 Auto-Restart on Reboot
-
-```bash
-# Docker containers restart automatically (restart: unless-stopped in docker-compose.yml)
-# But ensure Docker starts on boot:
-sudo systemctl enable docker
-```
-
----
-
-## Step 4: Deploy Frontend to Vercel
-
-### 4.1 Connect to Vercel
-
-1. Go to [vercel.com](https://vercel.com) → **Add New Project**
-2. Import your GitHub repository
-3. **Framework Preset:** Next.js
-4. **Root Directory:** `frontend`
-5. **Environment Variables:**
-
-| Variable | Value |
-|----------|-------|
-| `NEXT_PUBLIC_API_URL` | `https://api.paperplane.harsh.software` |
-
-6. Click **Deploy**
-
-### 4.2 Add Custom Domain
-
-1. In Vercel project → **Settings** → **Domains**
-2. Add: `paperplane.harsh.software`
-3. Vercel will show you the DNS values — you already added the CNAME record in Step 2
-4. SSL is automatic on Vercel
-
----
-
-## Step 5: Set Up CI/CD
-
-### 5.1 GitHub Secrets
-
-Go to your repo → **Settings** → **Secrets and variables** → **Actions**
-
-Add these secrets:
-
-| Secret | Value |
-|--------|-------|
-| `DROPLET_IP` | Your Droplet IP address |
-| `SSH_PRIVATE_KEY` | Your SSH private key (for the `paperplane` user) |
-| `VERCEL_TOKEN` | Get from [vercel.com/account/tokens](https://vercel.com/account/tokens) |
-| `VERCEL_ORG_ID` | From `.vercel/project.json` after first deploy |
-| `VERCEL_PROJECT_ID` | From `.vercel/project.json` after first deploy |
-
-### 5.2 Set Up SSH Key for Deployment
-
-On your **local machine**:
-
-```bash
-# Generate a deploy key
-ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/paperplane_deploy
-
-# Copy public key to Droplet
-ssh-copy-id -i ~/.ssh/paperplane_deploy.pub paperplane@YOUR_DROPLET_IP
-
-# Copy private key content — paste into GitHub Secrets as SSH_PRIVATE_KEY
-cat ~/.ssh/paperplane_deploy
-```
-
-### 5.3 How It Works
-
-Every push to `main`:
-1. **Test job:** Lints backend (ruff) + builds frontend
-2. **Deploy backend:** SSHs into Droplet → `git pull` → `docker compose up -d --build backend`
-3. **Deploy frontend:** Pushes to Vercel via their API
-
-The workflow is at `.github/workflows/deploy.yml`.
-
----
-
-## Step 6: Environment Variables Checklist
-
-### On DigitalOcean (`.env` file on the Droplet)
-
-```bash
-# SSH in and edit
-ssh paperplane@YOUR_DROPLET_IP
-cd PaperPlane
-nano .env
-```
-
-All backend env vars go here (Gemini key, Discord webhook, LinkedIn cookies, etc.)
-
-### On Vercel (Web UI)
-
-Only one variable needed:
-
-| Variable | Value |
-|----------|-------|
-| `NEXT_PUBLIC_API_URL` | `https://api.paperplane.harsh.software` |
-
----
-
-## Step 7: Monitoring & Maintenance
-
-### View Logs
-
-```bash
-# Backend logs
-ssh paperplane@YOUR_DROPLET_IP
-cd PaperPlane
-docker compose logs -f backend --tail 100
-
-# Application logs
-cat logs/activity.log
-```
-
-### Restart Services
-
-```bash
-docker compose restart backend
-```
-
-### Update Manually (if CI/CD is not set up yet)
-
-```bash
-ssh paperplane@YOUR_DROPLET_IP
-cd PaperPlane
-git pull origin main
-docker compose up -d --build backend
-```
-
-### Backups
-
-```bash
-# Backup the database (run from Droplet)
-cp data/applications.db data/applications.db.backup.$(date +%Y%m%d)
-
-# Or download to local
-scp paperplane@YOUR_DROPLET_IP:~/PaperPlane/data/applications.db ./backup/
-```
-
-### Resource Monitoring
-
-```bash
-# Check Docker resource usage
-docker stats
-
-# Check disk space
-df -h
-
-# Check memory
-free -h
-```
-
----
-
-## Quick Reference
-
-| What | URL |
-|------|-----|
-| Frontend Dashboard | `https://paperplane.harsh.software` |
-| Backend API | `https://api.paperplane.harsh.software` |
-| API Docs (Swagger) | `https://api.paperplane.harsh.software/docs` |
-| Vercel Dashboard | `https://vercel.com/dashboard` |
-| DigitalOcean Console | `https://cloud.digitalocean.com` |
-| GitHub Actions | `https://github.com/Harsh-H-Shah/PaperPlane/actions` |
-
----
-
-## Troubleshooting
-
-**502 Bad Gateway from Nginx**
-→ Backend container isn't running. Check: `docker compose ps` and `docker compose logs backend`
-
-**SSL certificate issues**
-→ Re-run: `sudo certbot --nginx -d api.paperplane.harsh.software`
-
-**Frontend can't reach backend (CORS error)**
-→ The backend CORS config already includes `https://paperplane.harsh.software`. If using a different domain, update `backend/src/dashboard/app.py`.
-
-**Out of memory on Droplet**
-→ Playwright + Chromium uses ~300-500MB. If the $6 Droplet isn't enough, upgrade to $12/mo (2GB RAM) — still well within your $200 credit.
-
-**Docker build fails on Droplet**
-→ The $6 Droplet has limited RAM. Try: `docker compose build --no-cache backend` or add swap:
-```bash
-sudo fallocate -l 2G /swapfile
-sudo chmod 600 /swapfile
-sudo mkswap /swapfile
-sudo swapon /swapfile
-echo '/swapfile swap swap defaults 0 0' | sudo tee -a /etc/fstab
-```
+Unchanged: `cd backend && python main.py dashboard`, and `cd frontend && npm run dev`. The original `docker-compose.yml` still builds both services locally.

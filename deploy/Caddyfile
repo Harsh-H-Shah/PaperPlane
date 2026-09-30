@@ -1,0 +1,11 @@
+# Caddy gets and renews the Let's Encrypt certificate for API_DOMAIN on its own.
+# The DNS record must point straight at the VM (Cloudflare proxy off / grey cloud).
+{$API_DOMAIN} {
+	encode gzip
+	reverse_proxy backend:8080 {
+		# Scrapes and applications can take a while.
+		transport http {
+			read_timeout 300s
+		}
+	}
+}
