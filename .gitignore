@@ -12,6 +12,7 @@ eggs/
 .eggs/
 lib/
 !frontend/lib/
+!extension/src/lib/
 lib64/
 parts/
 sdist/
