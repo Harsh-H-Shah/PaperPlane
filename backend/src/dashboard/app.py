@@ -13,7 +13,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from src.utils.database import get_db
 from src.utils.config import get_settings
 from src.core.job import JobStatus, ApplicationType
@@ -353,8 +353,8 @@ async def list_jobs(
     app_type: Optional[str] = Query(None, alias="type"),
     search: Optional[str] = None,
     sort: Optional[str] = "newest",
-    page: int = 1,
-    per_page: int = 50
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1)
 ):
     db = get_db()
     from src.utils.database import JobModel
@@ -473,36 +473,35 @@ async def delete_job(job_id: str):
 
 @app.get("/api/scrapers/status")
 async def get_scraper_status():
+    from src.scrapers import aggregator as agg
+
     settings = get_settings()
-    
+
+    # Mirrors JobAggregator._setup_scrapers. The frontend sends name.lower()
+    # as the source, which must be a key JobAggregator.scrape_source accepts.
+    sources = [
+        (agg.SimplifyScraper, settings.scrapers.simplify.enabled, "📦"),
+        (agg.CVRVEScraper, settings.scrapers.cvrve.enabled, "🎯"),
+        (agg.JobrightScraper, True, "🚀"),
+        (agg.BuiltInScraper, True, "🏗️"),
+        (agg.CareerjetScraper, True, "✈️"),
+        (agg.GreenhouseJobsScraper, True, "🌱"),
+        (agg.GoogleJobsScraper, True, "🔎"),
+        (agg.GlassdoorScraper, True, "🚪"),
+        (agg.LevelsfyiScraper, True, "📈"),
+        (agg.DuckDuckGoScraper, True, "🦆"),
+    ]
+
     scrapers = [
         {
-            "name": "Simplify",
-            "enabled": settings.scrapers.simplify.enabled,
+            "name": cls.SOURCE_NAME,
+            "enabled": enabled,
             "configured": True,
-            "icon": "📦"
-        },
-        {
-            "name": "CVRVE",
-            "enabled": settings.scrapers.cvrve.enabled,
-            "configured": True,
-            "icon": "🎯"
-        },
-        {
-            "name": "Jobright",
-            "enabled": True,
-            "configured": True,
-            "icon": "🚀"
-        },
-
-        {
-            "name": "WeWorkRemotely",
-            "enabled": True,
-            "configured": True,
-            "icon": "🌍"
-        },
+            "icon": icon,
+        }
+        for cls, enabled, icon in sources
     ]
-    
+
     return {"scrapers": scrapers}
 
 
@@ -794,17 +793,26 @@ async def get_combat_history():
         "needs_review": {"label": "INTEL REQUIRED", "xp": 0, "color": "orange"},
         "failed": {"label": "MISSION FAILED", "xp": 0, "color": "red"},
         "skipped": {"label": "ABORTED", "xp": 0, "color": "gray"},
+        "new": {"label": "TARGET ACQUIRED", "xp": 0, "color": "gray"},
     }
-    
+
     with db.session() as session:
-        recent = session.query(JobModel).filter(
+        # Jobs with real activity come first, then the newest untouched targets
+        # fill the rest so the panel isn't empty right after a scrape.
+        activity = session.query(JobModel).filter(
             JobModel.status.in_([
                 JobStatus.APPLIED.value,
                 JobStatus.IN_PROGRESS.value,
                 JobStatus.NEEDS_REVIEW.value,
                 JobStatus.FAILED.value,
             ])
-        ).order_by(JobModel.discovered_at.desc()).limit(10).all()
+        ).order_by(func.coalesce(JobModel.applied_at, JobModel.discovered_at).desc()).limit(10).all()
+
+        new_targets = session.query(JobModel).filter(
+            JobModel.status == JobStatus.NEW.value
+        ).order_by(JobModel.discovered_at.desc()).limit(20 - len(activity)).all()
+
+        recent = activity + new_targets
         
         history = []
         for job in recent:
