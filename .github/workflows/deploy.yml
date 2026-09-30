@@ -1,6 +1,7 @@
 name: Deploy PaperPlane
 
-# Backend: image built here, pushed to GHCR, pulled by the Google Cloud VM.
+# Backend (only when VM_HOST is set): image built here, pushed to GHCR, pulled
+# by the VM. A home server behind a Cloudflare Tunnel needs no backend deploy.
 # Frontend: static export published to GitHub Pages.
 #
 # Repository variables (Settings → Secrets and variables → Actions → Variables):
@@ -41,7 +42,7 @@ jobs:
       - name: Lint backend
         run: |
           cd backend
-          pip install ruff
+          pip install ruff==0.16.9
           ruff check src/
 
       - name: Set up Node.js
@@ -71,6 +72,8 @@ jobs:
   build-backend:
     name: Build backend image
     needs: test
+    # Only needed when the backend runs on a VM; a home server builds locally.
+    if: vars.VM_HOST != ''
     runs-on: ubuntu-latest
     permissions:
       contents: read

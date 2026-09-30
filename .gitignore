@@ -44,6 +44,7 @@ backend/.venv/
 # Data files (sensitive) — all runtime data lives in the repo-root data/ dir
 data/profile.json
 data/*.db
+data/backups/
 data/llm_usage.json
 data/browser_context/
 
